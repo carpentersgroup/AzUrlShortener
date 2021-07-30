@@ -5,6 +5,9 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net;
 
 namespace Cloud5mins.domain
 {
@@ -161,6 +164,18 @@ namespace Cloud5mins.domain
                 });
             }
             return null;
+        }
+
+        public static IPAddress GetClientIpn(this HttpRequestMessage request)
+        {
+            IPAddress result = null;
+            if (request.Headers.TryGetValues("X-Forwarded-For", out IEnumerable<string> values))
+            {
+                var ipn = values.FirstOrDefault().Split(new char[] { ',' }).FirstOrDefault().Split(new char[] { ':' }).FirstOrDefault();
+                IPAddress.TryParse(ipn, out result);
+            }
+
+            return result;
         }
     }
 }

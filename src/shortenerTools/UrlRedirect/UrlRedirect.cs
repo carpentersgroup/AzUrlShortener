@@ -47,7 +47,7 @@ namespace Cloud5mins.Function
                 if (newUrl != null)
                 {
                     log.LogInformation($"Found it: {newUrl.Url}");
-                    await SetUrlClickStatsAsync(newUrl);
+                    await SetUrlClickStatsAsync(newUrl, req);
                     _storageTableHelper.SaveClickStatsEntity(new ClickStatsEntity(newUrl.RowKey));
                     await _storageTableHelper.SaveShortUrlEntity(newUrl);
                     redirectUrl = WebUtility.UrlDecode(newUrl.Url);
@@ -63,16 +63,26 @@ namespace Cloud5mins.Function
             return res;
         }
 
-        private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl)
+        private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl, HttpRequestMessage req)
         {
             newUrl.Clicks++;
 
-            shortenerTools.Models.UserIpResponse userIpResponse;
+            shortenerTools.Models.UserIpResponse userIpResponse = null;
             try
             {
-                userIpResponse = await _userIpLocationService.GetUserIpAsync(CancellationToken.None);
+                var ip = Utility.GetClientIpn(req);
+
+                if (ip != null)
+                {
+                    userIpResponse = await _userIpLocationService.GetUserIpAsync(ip.ToString(), CancellationToken.None);
+                }
             }
             catch
+            {
+                
+            }
+
+            if(userIpResponse is null || string.IsNullOrEmpty(userIpResponse.CountryName))
             {
                 userIpResponse = new shortenerTools.Models.UserIpResponse
                 {

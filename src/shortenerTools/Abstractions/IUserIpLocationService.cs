@@ -6,6 +6,6 @@ namespace shortenerTools.Abstractions
 {
     public interface IUserIpLocationService
     {
-        Task<UserIpResponse> GetUserIpAsync(CancellationToken cancellationToken);
+        Task<UserIpResponse> GetUserIpAsync(string ip, CancellationToken cancellationToken);
     }
 }

@@ -16,9 +16,9 @@ namespace shortenerTools.Implementations
             _httpClient = httpClient;
         }
 
-        public async Task<UserIpResponse> GetUserIpAsync(CancellationToken cancellationToken)
+        public async Task<UserIpResponse> GetUserIpAsync(string ip, CancellationToken cancellationToken)
         {
-            return await _httpClient.GetAsync<UserIpResponse>("/json", cancellationToken);
+            return await _httpClient.GetAsync<UserIpResponse>($"/json/{ip}", cancellationToken);
         }
     }
 }
