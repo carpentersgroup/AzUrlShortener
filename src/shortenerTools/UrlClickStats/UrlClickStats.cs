@@ -23,7 +23,7 @@ namespace Cloud5mins.Function
 
         [FunctionName("UrlClickStats")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequestMessage req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
         ILogger log,
         ExecutionContext context,
         ClaimsPrincipal principal)

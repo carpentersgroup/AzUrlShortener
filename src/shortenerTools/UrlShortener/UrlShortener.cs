@@ -51,7 +51,7 @@ namespace Cloud5mins.Function
 
         [FunctionName("UrlShortener")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequestMessage req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequestMessage req,
         ILogger log,
         ExecutionContext context,
         ClaimsPrincipal principal)
