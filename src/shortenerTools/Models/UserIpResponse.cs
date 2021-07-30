@@ -6,27 +6,27 @@ namespace shortenerTools.Models
     [ExcludeFromCodeCoverage]
     public class UserIpResponse
     {
-        [JsonProperty("ip")]
+        [System.Text.Json.Serialization.JsonPropertyName("ip")]
         public string Ip { get; set; }
-        [JsonProperty("country_code")]
+        [System.Text.Json.Serialization.JsonPropertyName("country_code")]
         public string CountryCode { get; set; }
-        [JsonProperty("country_name")]
+        [System.Text.Json.Serialization.JsonPropertyName("country_name")]
         public string CountryName { get; set; }
-        [JsonProperty("region_code")]
+        [System.Text.Json.Serialization.JsonPropertyName("region_code")]
         public string RegionCode { get; set; }
-        [JsonProperty("region_name")]
+        [System.Text.Json.Serialization.JsonPropertyName("region_name")]
         public string RegionName { get; set; }
-        [JsonProperty("city")]
+        [System.Text.Json.Serialization.JsonPropertyName("city")]
         public string City { get; set; }
-        [JsonProperty("zip_code")]
+        [System.Text.Json.Serialization.JsonPropertyName("zip_code")]
         public string ZipCode { get; set; }
-        [JsonProperty("time_zone")]
+        [System.Text.Json.Serialization.JsonPropertyName("time_zone")]
         public string TimeZone { get; set; }
-        [JsonProperty("latitude")]
+        [System.Text.Json.Serialization.JsonPropertyName("latitude")]
         public float Latitude { get; set; }
-        [JsonProperty("longitude")]
+        [System.Text.Json.Serialization.JsonPropertyName("longitude")]
         public float Longitude { get; set; }
-        [JsonProperty("metro_code")]
+        [System.Text.Json.Serialization.JsonPropertyName("metro_code")]
         public int MetroCode { get; set; }
     }
 }

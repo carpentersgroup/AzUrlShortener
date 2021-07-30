@@ -79,15 +79,7 @@ namespace Cloud5mins.Function
             }
             catch
             {
-                
-            }
-
-            if(userIpResponse is null || string.IsNullOrEmpty(userIpResponse.CountryName))
-            {
-                userIpResponse = new shortenerTools.Models.UserIpResponse
-                {
-                    CountryName = "Unknown"
-                };
+                return;
             }
 
             if (newUrl.ClicksByCountry.ContainsKey(userIpResponse.CountryName))
