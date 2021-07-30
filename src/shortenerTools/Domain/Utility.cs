@@ -166,13 +166,18 @@ namespace Cloud5mins.domain
             return null;
         }
 
-        public static IPAddress GetClientIpn(this HttpRequestMessage request)
+        public static IPAddress GetClientIpn(this Microsoft.AspNetCore.Http.HttpRequest request)
         {
             IPAddress result = null;
-            if (request.Headers.TryGetValues("X-Forwarded-For", out IEnumerable<string> values))
+            if (request.Headers.TryGetValue("X-Forwarded-For", out Microsoft.Extensions.Primitives.StringValues values))
             {
                 var ipn = values.FirstOrDefault().Split(new char[] { ',' }).FirstOrDefault().Split(new char[] { ':' }).FirstOrDefault();
                 IPAddress.TryParse(ipn, out result);
+            }
+
+            if(result == null)
+            {
+                result = request.HttpContext.Connection.RemoteIpAddress;
             }
 
             return result;

@@ -1,4 +1,5 @@
 using Cloud5mins.domain;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Configuration;
@@ -26,20 +27,18 @@ namespace Cloud5mins.Function
         }
 
         [FunctionName("UrlRedirect")]
-        public async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "UrlRedirect/{shortUrl}")] HttpRequestMessage req,
+        public async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "UrlRedirect/{shortUrl}")] Microsoft.AspNetCore.Http.HttpRequest req,
             string shortUrl,
             ExecutionContext context,
             ILogger log)
         {
             log.LogInformation($"C# HTTP trigger function processed for Url: {shortUrl}");
 
-            var redirectUrl = "https://azure.com";
+            var redirectUrl = _configuration["defaultRedirectUrl"];
 
             if (!string.IsNullOrWhiteSpace(shortUrl))
             {
-                redirectUrl = _configuration["defaultRedirectUrl"];
-
                 var tempUrl = new ShortUrlEntity(string.Empty, shortUrl);
 
                 var newUrl = await _storageTableHelper.GetShortUrlEntity(tempUrl);
@@ -47,7 +46,7 @@ namespace Cloud5mins.Function
                 if (newUrl != null)
                 {
                     log.LogInformation($"Found it: {newUrl.Url}");
-                    await SetUrlClickStatsAsync(newUrl, req);
+                    await SetUrlClickStatsAsync(newUrl, req, log);
                     _storageTableHelper.SaveClickStatsEntity(new ClickStatsEntity(newUrl.RowKey));
                     await _storageTableHelper.SaveShortUrlEntity(newUrl);
                     redirectUrl = WebUtility.UrlDecode(newUrl.Url);
@@ -58,12 +57,10 @@ namespace Cloud5mins.Function
                 log.LogInformation("Bad Link, resorting to fallback.");
             }
 
-            var res = req.CreateResponse(HttpStatusCode.Redirect);
-            res.Headers.Add("Location", redirectUrl);
-            return res;
+            return new RedirectResult(redirectUrl, false);
         }
 
-        private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl, HttpRequestMessage req)
+        private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl, Microsoft.AspNetCore.Http.HttpRequest req, ILogger log)
         {
             newUrl.Clicks++;
 
@@ -71,6 +68,8 @@ namespace Cloud5mins.Function
             try
             {
                 var ip = Utility.GetClientIpn(req);
+
+                log.LogInformation(ip == null ? "Failed to get client ip" : "Got client ip");
 
                 if (ip != null)
                 {
