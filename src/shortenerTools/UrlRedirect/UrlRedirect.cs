@@ -83,10 +83,12 @@ namespace Cloud5mins.Function
 
             if (newUrl.ClicksByCountry.ContainsKey(userIpResponse.CountryName))
             {
+                log.LogInformation("Previously seen country, increasing click count");
                 newUrl.ClicksByCountry[userIpResponse.CountryName] = newUrl.ClicksByCountry[userIpResponse.CountryName]++;
             }
             else
             {
+                log.LogInformation("New country, settings click count to 1");
                 newUrl.ClicksByCountry.Add(userIpResponse.CountryName, 1);
             }
         }
