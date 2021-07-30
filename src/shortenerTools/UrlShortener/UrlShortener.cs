@@ -20,153 +20,169 @@ Output:
     }
 */
 
-using System;
-using System.Threading.Tasks;
+using Cloud5mins.domain;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using shortenerTools.Abstractions;
+using System;
 using System.Net;
-using Cloud5mins.domain;
-using Microsoft.Extensions.Configuration;
+using System.Net.Http;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Text.Json;
-using Microsoft.Azure.Documents;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Cloud5mins.Function
 {
 
-    public static class UrlShortener
+    public class UrlShortener : FunctionBase
     {
+        private readonly IStorageTableHelper _storageTableHelper;
+        private readonly IConfiguration _configuration;
+
+        public UrlShortener(IStorageTableHelper storageTableHelper, IConfiguration configuration)
+        {
+            _storageTableHelper = storageTableHelper;
+            this._configuration = configuration;
+        }
 
         [FunctionName("UrlShortener")]
-        public static async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
+        public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequestMessage req,
         ILogger log,
         ExecutionContext context,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            ShortRequest input;
-            var result = new ShortResponse();
+            // Validation of the inputs
+            var (requestValid, invalidResult, shortRequest) = await ValidateRequestAsync<ShortRequest>(context, req, principal, log);
 
-            var config = new ConfigurationBuilder()
-                    .SetBasePath(context.FunctionAppDirectory)
-                    .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                    .AddEnvironmentVariables()
-                    .Build();
+            if (!requestValid)
+            {
+                return invalidResult;
+            }
+            
+            // If the Url parameter only contains whitespaces or is empty return with BadRequest.
+            if (string.IsNullOrWhiteSpace(shortRequest.Url))
+            {
+                return new BadRequestObjectResult("The url parameter can not be empty.");
+            }
+
+            // Validates if input.url is a valid absolute url, aka is a complete reference to the resource, ex: http(s)://google.com
+            if (!Uri.IsWellFormedUriString(shortRequest.Url, UriKind.Absolute))
+            {
+                return new BadRequestObjectResult($"{shortRequest.Url} is not a valid absolute Url. The Url parameter must start with 'http://' or 'http://'.");
+            }
 
             try
             {
-                IActionResult authActionResult;
-                bool apiAccessEnabled = config.GetValue<bool>("enableApiAccess");
-
-                if (apiAccessEnabled && Utility.IsAppOnlyToken(principal))
-                {
-                    string requiredRole = config.GetValue<string>("urlShortenApiRoleName");
-
-                    authActionResult = Utility.CheckAuthRole(principal, log, requiredRole);
-                }
-                else
-                {
-                    authActionResult = Utility.CheckUserImpersonatedAuth(principal, log);
-                }
-
-                if (authActionResult != null)
-                {
-                    return authActionResult;
-                }
-                else
-                {
-                    if (principal.FindFirst(ClaimTypes.GivenName) != null)
-                    {
-                        string userId = principal.FindFirst(ClaimTypes.GivenName).Value;
-                        log.LogInformation("Authenticated user {user}.", userId);
-
-                        
-                    }
-                    else if(principal.FindFirst(ClaimTypes.Role) != null)
-                    {
-                        log.LogInformation("Authenticated role.");
-                    }
-                }
-
-                // Validation of the inputs
-                if (req == null)
-                {
-                    return new BadRequestObjectResult(new { StatusCode = HttpStatusCode.NotFound });
-                }
-
-                using (var reader = new StreamReader(req.Body))
-                {
-                    var strBody = reader.ReadToEnd();
-                    input = JsonSerializer.Deserialize<ShortRequest>(strBody, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
-                    if (input == null)
-                    {
-                        return new BadRequestObjectResult(new { StatusCode = HttpStatusCode.NotFound });
-                    }
-                }
-
-                // If the Url parameter only contains whitespaces or is empty return with BadRequest.
-                if (string.IsNullOrWhiteSpace(input.Url))
-                {
-                    return new BadRequestObjectResult(new { StatusCode = HttpStatusCode.BadRequest, Message = "The url parameter can not be empty." });
-                }
-
-                // Validates if input.url is a valid aboslute url, aka is a complete refrence to the resource, ex: http(s)://google.com
-                if (!Uri.IsWellFormedUriString(input.Url, UriKind.Absolute))
-                {
-                    return new BadRequestObjectResult(new
-                    {
-                        StatusCode = HttpStatusCode.BadRequest,
-                        Message = $"{input.Url} is not a valid absolute Url. The Url parameter must start with 'http://' or 'http://'."
-                    });
-                }
-
-                StorageTableHelper stgHelper = new StorageTableHelper(config["UlsDataStorage"]);
-
-
-                string longUrl = input.Url.Trim();
-                string vanity = string.IsNullOrWhiteSpace(input.Vanity) ? "" : input.Vanity.Trim();
-                string title = string.IsNullOrWhiteSpace(input.Title) ? "" : input.Title.Trim();
+                var longUrl = shortRequest.Url.Trim();
+                var vanity = string.IsNullOrWhiteSpace(shortRequest.Vanity) ? "" : shortRequest.Vanity.Trim();
+                var title = string.IsNullOrWhiteSpace(shortRequest.Title) ? "" : shortRequest.Title.Trim();
 
 
                 ShortUrlEntity newRow;
 
                 if (!string.IsNullOrEmpty(vanity))
                 {
-                    newRow = new ShortUrlEntity(longUrl, vanity, title, input.Schedules);
-                    if (await stgHelper.IfShortUrlEntityExist(newRow))
+
+                    newRow = new ShortUrlEntity(longUrl, vanity, title, shortRequest.Schedules);
+                    if (await _storageTableHelper.IfShortUrlEntityExist(newRow))
                     {
-                        return new ConflictObjectResult(new{ Message = "This Short URL already exist."});
+                        return new ConflictObjectResult("This Short URL already exist.");
                     }
                 }
                 else
                 {
-                    newRow = new ShortUrlEntity(longUrl, await Utility.GetValidEndUrl(vanity, stgHelper), title, input.Schedules);
+                    newRow = new ShortUrlEntity(longUrl, await Utility.GetValidEndUrl(vanity, _storageTableHelper), title, shortRequest.Schedules);
                 }
 
-                await stgHelper.SaveShortUrlEntity(newRow);
+                await _storageTableHelper.SaveShortUrlEntity(newRow);
 
-                var host = string.IsNullOrEmpty(config["customDomain"]) ? req.Host.Host: config["customDomain"].ToString();
-                result = new ShortResponse(host, newRow.Url, newRow.RowKey, newRow.Title);
+                string customDomain = this._configuration.GetValue<string>("customDomain");
+
+                var host = string.IsNullOrEmpty(customDomain) ? req.RequestUri.GetLeftPart(UriPartial.Authority) : customDomain;
+
+                log.LogInformation($"-> host = {host}");
+
+                var result = new ShortResponse(host, newRow.Url, newRow.RowKey, newRow.Title);
 
                 log.LogInformation("Short Url created.");
+
+                return new OkObjectResult(result);
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "An unexpected error was encountered.");
+                log.LogError(ex, "{functionName} failed due to an unexpected error: {errorMessage}.",
+                    context.FunctionName, ex.GetBaseException().Message);
+
                 return new BadRequestObjectResult(new
                 {
                     message = ex.Message,
-                    StatusCode =  HttpStatusCode.BadRequest
+                    StatusCode = HttpStatusCode.BadRequest
                 });
             }
+        }
 
-            return new OkObjectResult(result);
+        public override async Task<(bool isValidRequest, IActionResult invalidResult, T requestType)> ValidateRequestAsync<T>(
+            ExecutionContext context, HttpRequestMessage req, ClaimsPrincipal principal, ILogger log)
+        {
+            IActionResult invalidRequest;
+            bool apiAccessEnabled = this._configuration.GetValue<bool>("enableApiAccess");
+
+            if (apiAccessEnabled && Utility.IsAppOnlyToken(principal))
+            {
+                string requiredRole = this._configuration.GetValue<string>("urlShortenApiRoleName");
+
+                invalidRequest = Utility.CheckAuthRole(principal, log, requiredRole);
+            }
+            else
+            {
+                invalidRequest = Utility.CheckUserImpersonatedAuth(principal, log);
+            }
+
+            if (invalidRequest != null)
+            {
+                return (false, invalidRequest, null as T);
+            }
+            else
+            {
+                if (principal.FindFirst(ClaimTypes.GivenName) != null)
+                {
+                    string userId = principal.FindFirst(ClaimTypes.GivenName).Value;
+                    log.LogInformation("Authenticated user {user}.", userId);
+
+
+                }
+                else if (principal.FindFirst(ClaimTypes.Role) != null)
+                {
+                    log.LogInformation("Authenticated role.");
+                }
+            }
+
+            if (invalidRequest != null)
+            {
+                return (false, invalidRequest, null as T);
+            }
+
+            LogAuthenticatedUser(principal, context, log);
+
+            if (req == null)
+            {
+                return (false, new NotFoundResult(), null);
+            }
+
+            var result = await req.Content.ReadAsAsync<T>();
+            if (result == null)
+            {
+                return (false, new NotFoundResult(), null);
+            }
+
+            return (true, null, result);
         }
     }
 }

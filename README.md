@@ -19,6 +19,7 @@ Features:
 - Create Edit and Delete short URL.
 - Redirect different destination base on schedules
 - Keep Statistics of your clicks.
+    - Click statistics by country
 - Budget-friendly and 100% open-source.
 - Secure by Azure Active Directory AAD (Microsoft Identity)
 - Simple step by step deployment 

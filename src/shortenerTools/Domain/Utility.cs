@@ -1,9 +1,10 @@
-using System.Linq;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using shortenerTools.Abstractions;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Cloud5mins.domain
 {
@@ -15,16 +16,16 @@ namespace Cloud5mins.domain
         //sets the length of the unique code to add to vanity
         private const int MinVanityCodeLength = 5;
 
-        public static async Task<string> GetValidEndUrl(string vanity, StorageTableHelper stgHelper)
+        public static async Task<string> GetValidEndUrl(string vanity, IStorageTableHelper stgHelper)
         {
             if (string.IsNullOrEmpty(vanity))
             {
                 var newKey = await stgHelper.GetNextTableId();
-                string getCode() => Encode(newKey);
-                if (await stgHelper.IfShortUrlEntityExistByVanity(getCode()))
+                string GetCode() => Encode(newKey);
+                if (await stgHelper.IfShortUrlEntityExistByVanity(GetCode()))
                     return await GetValidEndUrl(vanity, stgHelper);
-              
-                return string.Join(string.Empty, getCode());
+
+                return string.Join(string.Empty, GetCode());
             }
             else
             {
