@@ -8,6 +8,7 @@
     "defaultRedirectUrl": "https://azure.com",
     "customDomain": "https://c5m.ca",
     "enableApiAccess": true,
-    "urlShortenApiRoleName": "Url.Shorten"
+    "urlShortenApiRoleName": "Url.Shorten",
+    "IpLocationService:Url": "https://freegeoip.app/"
   }
 }

@@ -27,8 +27,10 @@ namespace Cloud5mins.domain
 
         public string ShortUrl { get; set; }
 
+        public int Clicks { get; set; }
+
         [EntityJsonPropertyConverter]
-        public Dictionary<string, int> Clicks { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> ClicksByCountry { get; set; } = new Dictionary<string, int>();
 
         public bool? IsArchived { get; set; }
         public string SchedulesPropertyRaw { get; set; }
@@ -71,7 +73,7 @@ namespace Cloud5mins.domain
             RowKey = endUrl;
             Url = longUrl;
             Title = title;
-            Clicks = new Dictionary<string, int>();
+            ClicksByCountry = new Dictionary<string, int>();
             IsArchived = false;
             Schedules = schedules;
         }

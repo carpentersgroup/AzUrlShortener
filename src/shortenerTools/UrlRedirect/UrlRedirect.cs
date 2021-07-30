@@ -65,14 +65,28 @@ namespace Cloud5mins.Function
 
         private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl)
         {
-            var userIpResponse = await _userIpLocationService.GetUserIpAsync(CancellationToken.None);
-            if (newUrl.Clicks.ContainsKey(userIpResponse.CountryName))
+            newUrl.Clicks++;
+
+            shortenerTools.Models.UserIpResponse userIpResponse;
+            try
             {
-                newUrl.Clicks[userIpResponse.CountryName] = newUrl.Clicks[userIpResponse.CountryName]++;
+                userIpResponse = await _userIpLocationService.GetUserIpAsync(CancellationToken.None);
+            }
+            catch
+            {
+                userIpResponse = new shortenerTools.Models.UserIpResponse
+                {
+                    CountryName = "Unknown"
+                };
+            }
+
+            if (newUrl.ClicksByCountry.ContainsKey(userIpResponse.CountryName))
+            {
+                newUrl.ClicksByCountry[userIpResponse.CountryName] = newUrl.ClicksByCountry[userIpResponse.CountryName]++;
             }
             else
             {
-                newUrl.Clicks.Add(userIpResponse.CountryName, 1);
+                newUrl.ClicksByCountry.Add(userIpResponse.CountryName, 1);
             }
         }
     }
