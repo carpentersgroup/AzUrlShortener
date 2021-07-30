@@ -30,7 +30,7 @@ namespace Cloud5mins.domain
         public int Clicks { get; set; }
 
         [EntityJsonPropertyConverter]
-        public Dictionary<string, int> ClicksByCountry { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> ClicksByCountry { get; set; }
 
         public bool? IsArchived { get; set; }
         public string SchedulesPropertyRaw { get; set; }
