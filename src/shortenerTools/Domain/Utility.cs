@@ -129,9 +129,17 @@ namespace Cloud5mins.domain
         public static bool IsAppOnlyToken(ClaimsPrincipal principal, ILogger log)
         {
             log.LogInformation(string.Join(", ", principal.Claims));
-            string oid = principal.FindFirst("oid")?.Value;
+            string oid = principal.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+            if (string.IsNullOrEmpty(oid))
+            {
+                oid = principal.FindFirst("oid")?.Value;
+            }
             log.LogInformation($"oid: {oid}");
-            string sub = principal.FindFirst("sub")?.Value;
+            string sub = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(sub))
+            {
+                sub = principal.FindFirst("sub")?.Value;
+            }
             log.LogInformation($"sub: {sub}");
             bool isAppOnlyToken = oid == sub;
             return isAppOnlyToken;
