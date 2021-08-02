@@ -86,7 +86,7 @@ namespace Cloud5mins.domain
                 return new UnauthorizedResult();
             }
 
-            bool isAppOnlyToken = IsAppOnlyToken(principal);
+            bool isAppOnlyToken = IsAppOnlyToken(principal, log);
 
             if (!isAppOnlyToken)
             {
@@ -128,7 +128,7 @@ namespace Cloud5mins.domain
 
         public static bool IsAppOnlyToken(ClaimsPrincipal principal, ILogger log)
         {
-            log.LogInformation(string.Join(", ", principal.Claims);
+            log.LogInformation(string.Join(", ", principal.Claims));
             string oid = principal.FindFirst("oid")?.Value;
             log.LogInformation($"oid: {oid}");
             string sub = principal.FindFirst("sub")?.Value;
