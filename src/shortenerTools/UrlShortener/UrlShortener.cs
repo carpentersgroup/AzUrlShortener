@@ -134,7 +134,7 @@ namespace Cloud5mins.Function
             IActionResult invalidRequest;
             bool apiAccessEnabled = this._configuration.GetValue<bool>("enableApiAccess");
 
-            if (apiAccessEnabled && Utility.IsAppOnlyToken(principal))
+            if (apiAccessEnabled && Utility.IsAppOnlyToken(principal, log))
             {
                 string requiredRole = this._configuration.GetValue<string>("urlShortenApiRoleName");
 

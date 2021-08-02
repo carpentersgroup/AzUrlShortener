@@ -86,15 +86,13 @@ namespace Cloud5mins.domain
                 return new UnauthorizedResult();
             }
 
-            bool isAppOnlyToken = IsAppOnlyToken(principal);
+            bool isAppOnlyToken = IsAppOnlyToken(principal, log);
 
             if (!isAppOnlyToken)
             {
                 log.LogWarning("Request for user was denied.");
                 return new UnauthorizedResult();
             }
-
-            log.LogInformation(string.Join(", ", principal.Claims));
 
             const string ROLES_CLAIM = "roles";
 
@@ -126,10 +124,20 @@ namespace Cloud5mins.domain
             return null;
         }
 
-        public static bool IsAppOnlyToken(ClaimsPrincipal principal)
+        public static bool IsAppOnlyToken(ClaimsPrincipal principal, ILogger log)
         {
-            string oid = principal.FindFirst("oid")?.Value;
-            string sub = principal.FindFirst("sub")?.Value;
+            string oid = principal.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+            if (string.IsNullOrEmpty(oid))
+            {
+                oid = principal.FindFirst("oid")?.Value;
+            }
+
+            string sub = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(sub))
+            {
+                sub = principal.FindFirst("sub")?.Value;
+            }
+
             bool isAppOnlyToken = oid == sub;
             return isAppOnlyToken;
         }
