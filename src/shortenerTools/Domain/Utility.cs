@@ -132,7 +132,7 @@ namespace Cloud5mins.domain
             string oid = principal.FindFirst("oid")?.Value;
             log.LogInformation($"oid: {oid}");
             string sub = principal.FindFirst("sub")?.Value;
-            log.LogInformation($"oid: {oid}");
+            log.LogInformation($"sub: {sub}");
             bool isAppOnlyToken = oid == sub;
             return isAppOnlyToken;
         }
