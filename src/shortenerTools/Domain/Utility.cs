@@ -126,10 +126,13 @@ namespace Cloud5mins.domain
             return null;
         }
 
-        public static bool IsAppOnlyToken(ClaimsPrincipal principal)
+        public static bool IsAppOnlyToken(ClaimsPrincipal principal, ILogger log)
         {
+            log.LogInformation(string.Join(", ", principal.Claims);
             string oid = principal.FindFirst("oid")?.Value;
+            log.LogInformation($"oid: {oid}");
             string sub = principal.FindFirst("sub")?.Value;
+            log.LogInformation($"oid: {oid}");
             bool isAppOnlyToken = oid == sub;
             return isAppOnlyToken;
         }
