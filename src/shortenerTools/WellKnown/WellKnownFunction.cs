@@ -24,7 +24,7 @@ namespace shortenerTools.WellKnown
 
         [FunctionName("WellKnown")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req, string filename,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "WellKnown/{filename}")] HttpRequest req, string filename,
         ILogger log)
         {
             if (!string.IsNullOrWhiteSpace(filename))
