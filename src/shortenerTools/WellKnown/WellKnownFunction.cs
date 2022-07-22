@@ -1,6 +1,7 @@
 ﻿using Cloud5mins.domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Configuration;
@@ -31,7 +32,12 @@ namespace shortenerTools.WellKnown
             {
                 var content = await _storageTableHelper.GetWellKnownContent(filename);
 
-                return new OkObjectResult(content);
+                string contentType;
+                new FileExtensionContentTypeProvider().TryGetContentType(filename, out contentType);
+                contentType = contentType ?? "application/octet-stream";
+
+                return new FileContentResult(System.Text.Encoding.UTF8.GetBytes(content), contentType);
+                //return new OkObjectResult(content);
             }
             else
             {
