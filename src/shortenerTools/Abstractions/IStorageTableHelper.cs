@@ -16,5 +16,6 @@ namespace shortenerTools.Abstractions
         void SaveClickStatsEntity(ClickStatsEntity newStats);
         Task<int> GetNextTableId();
         Task<bool> IfShortUrlEntityExistByVanity(string vanity);
+        Task<string> GetWellKnownContent(string filename);
     }
 }

@@ -21,10 +21,15 @@ namespace Cloud5mins.domain
             var table = GetTable("ClickStats");
             return table;
         }
-
         private CloudTable GetUrlsTable()
         {
             var table = GetTable("UrlsDetails");
+            return table;
+        }
+
+        private CloudTable GetWellKnownTable()
+        {
+            CloudTable table = GetTable("WellKnown");
             return table;
         }
 
@@ -34,6 +39,14 @@ namespace Cloud5mins.domain
             table.CreateIfNotExists();
 
             return table;
+        }
+
+        public async Task<string> GetWellKnownContent(string filename)
+        {
+            TableOperation selOperation = TableOperation.Retrieve<WellKnownEntity>("WellKnown", filename);
+            TableResult result = await GetWellKnownTable().ExecuteAsync(selOperation);
+            WellKnownEntity wellKnown = result.Result as WellKnownEntity;
+            return wellKnown.Content;
         }
 
         public async Task<ShortUrlEntity> GetShortUrlEntity(ShortUrlEntity row)

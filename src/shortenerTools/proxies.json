@@ -1,6 +1,13 @@
 {
   "$schema": "http://json.schemastore.org/proxies",
   "proxies": {
+      "WellKnownProxy": {
+        "matchCondition": {
+          "route": "/.well-known/{filename}"
+        },
+        "backendUri": "http://%WEBSITE_HOSTNAME%/api/WellKnown/{filename}"
+      }
+    },
     "Domain Redirect": {
       "matchCondition": {
         "route": "/{shortUrl}"
