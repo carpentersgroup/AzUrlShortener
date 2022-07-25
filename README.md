@@ -19,6 +19,7 @@ Features:
 - Create Edit and Delete short URL.
 - Redirect different destination base on schedules
 - Keep Statistics of your clicks.
+    - Click statistics by country
 - Budget-friendly and 100% open-source.
 - Secure by Azure Active Directory AAD (Microsoft Identity)
 - Simple step by step deployment 
@@ -36,9 +37,6 @@ To have all alternative and previous version deployments, refer to the [Azure Fu
 If you want to **Update** or **Upgrade**, please refer to [this page](https://github.com/FBoucher/AzUrlShortener/blob/main/doc/Update-upgrade.md). 
 
 ## How To Use It
-
-There are many different ways to manage your Short Urls, from a direct HTTP call to a fancy website. 
-[See the complete list of admin frontends here](src/adminTools/README.md), with the instructions to deploy and use them. 
 
 There is also a video that does a quick tour of the project.
 
@@ -82,7 +80,6 @@ If you find a bug or would like to add a feature, check out those resources:
 
 Check out our [Code of Conduct](CODE_OF_CONDUCT.md) and [Contributing](CONTRIBUTING.md) docs. This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.  Contributions of any kind welcome!
 
-There is also instructions or [guidance](src/adminTools/README.md#how-to-add-a-new-frontend) if you would like to create a new one and collaborate to this project.
 
 
 ## Contributors ✨
