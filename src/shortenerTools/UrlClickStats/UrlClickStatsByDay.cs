@@ -91,7 +91,7 @@ namespace Cloud5mins.Function
                                                 Count = stat.Count()
                                             }).OrderBy(s => DateTime.Parse(s.DateClicked).Date).ToList<ClickDate>();
 
-                var host = this._configuration.UseCustomDomain ? req.RequestUri.GetLeftPart(UriPartial.Authority) : this._configuration.CustomDomain;
+                var host = this._configuration.UseCustomDomain ? this._configuration.CustomDomain : req.RequestUri.GetLeftPart(UriPartial.Authority);
 
                 result.Url = Utility.GetShortUrl(host, clickStatsRequest.Vanity);
             }

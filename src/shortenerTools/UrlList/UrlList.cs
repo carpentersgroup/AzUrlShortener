@@ -66,7 +66,7 @@ namespace Cloud5mins.Function
                 result.UrlList = await _storageTableHelper.GetAllShortUrlEntities();
                 result.UrlList = result.UrlList.Where(p => !(p.IsArchived ?? false)).ToList();
 
-                var host = this._configuration.UseCustomDomain ? req.RequestUri.GetLeftPart(UriPartial.Authority) : this._configuration.CustomDomain;
+                var host = this._configuration.UseCustomDomain ? this._configuration.CustomDomain : req.RequestUri.GetLeftPart(UriPartial.Authority);
                 foreach (var shortUrl in result.UrlList)
                 {
                     shortUrl.ShortUrl = Utility.GetShortUrl(host, shortUrl.RowKey);

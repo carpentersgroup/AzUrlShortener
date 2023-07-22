@@ -96,7 +96,7 @@ namespace Cloud5mins.Function
 
                 await _storageTableHelper.SaveShortUrlEntity(newRow);
 
-                var host = this._urlShortenerConfiguration.UseCustomDomain ? req.RequestUri.GetLeftPart(UriPartial.Authority) : this._urlShortenerConfiguration.CustomDomain;
+                var host = this._urlShortenerConfiguration.UseCustomDomain ? this._urlShortenerConfiguration.CustomDomain : req.RequestUri.GetLeftPart(UriPartial.Authority);
 
                 log.LogInformation($"-> host = {host}");
 
