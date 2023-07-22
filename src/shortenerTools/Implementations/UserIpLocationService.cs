@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using shortenerTools.Abstractions;
-using shortenerTools.Extensions;
 using shortenerTools.Models;
 using System.Net.Http;
 using System.Threading;
