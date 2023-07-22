@@ -1,8 +1,6 @@
 using adminBlazorWebsite.Abstractions;
 using Cloud5mins.Config;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading;

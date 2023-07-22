@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using shortenerTools.Abstractions;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Net;

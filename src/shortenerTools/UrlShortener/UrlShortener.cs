@@ -30,10 +30,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
-using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Cloud5mins.Function

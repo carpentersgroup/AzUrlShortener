@@ -1,13 +1,10 @@
-﻿using Cloud5mins.domain;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using shortenerTools.Abstractions;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace shortenerTools.WellKnown

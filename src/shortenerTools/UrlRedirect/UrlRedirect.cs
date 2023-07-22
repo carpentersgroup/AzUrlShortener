@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using shortenerTools.Abstractions;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
