@@ -4,6 +4,7 @@ using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using shortenerTools;
 using shortenerTools.Abstractions;
 using shortenerTools.Implementations;
@@ -36,9 +37,21 @@ namespace shortenerTools
             builder.Services.AddSingleton<IStorageTableHelper, StorageTableHelper>(provider =>
             {
                 var storageAccount = CloudStorageAccount.Parse(configuration.GetSection("UlsDataStorage").Value);
-                var tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
+                var tableClient = storageAccount.CreateCloudTableClient();
                 
-                return new StorageTableHelper(tableClient);
+                var storageHelper = new StorageTableHelper(tableClient);
+                System.Threading.Tasks.Task.Run(async () =>
+                {
+                    try
+                    {
+                        await storageHelper.CreateTables().ConfigureAwait(false);
+                    }
+                    catch(Exception ex)
+                    {
+                        provider.GetService<Microsoft.Extensions.Logging.ILogger>()?.LogError(ex, "Error creating tables");
+                    }
+                });
+                return storageHelper;
             });
         }
     }

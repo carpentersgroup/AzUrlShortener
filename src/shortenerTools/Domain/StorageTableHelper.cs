@@ -14,6 +14,13 @@ namespace Cloud5mins.domain
         {
             _cloudTableClient = cloudTableClient;
         }
+
+        public async Task CreateTables()
+        {
+            await GetStatsTable().CreateIfNotExistsAsync().ConfigureAwait(false);
+            await GetUrlsTable().CreateIfNotExistsAsync().ConfigureAwait(false);
+            await GetWellKnownTable().CreateIfNotExistsAsync().ConfigureAwait(false);
+        }
         
         private CloudTable GetStatsTable()
         {
@@ -38,8 +45,6 @@ namespace Cloud5mins.domain
         private CloudTable GetTable(string tableName)
         {
             var table = _cloudTableClient.GetTableReference(tableName);
-            table.CreateIfNotExists();
-
             return table;
         }
 
