@@ -21,6 +21,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using shortenerTools.Abstractions;
 using System;
 using System.Linq;
@@ -35,12 +36,12 @@ namespace Cloud5mins.Function
     {
         private readonly IStorageTableHelper _storageTableHelper;
 
-        private readonly IConfiguration _configuration;
+        private readonly UrlShortenerConfiguration _configuration;
 
-        public UrlList(IStorageTableHelper storageTableHelper, IConfiguration configuration)
+        public UrlList(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration)
         {
             _storageTableHelper = storageTableHelper;
-            this._configuration = configuration;
+            this._configuration = configuration.Value;
         }
 
         [FunctionName("UrlList")]
@@ -52,21 +53,21 @@ namespace Cloud5mins.Function
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            var (requestValid, invalidResult, result) = await ValidateRequestAsync<ListResponse>(context, req, principal, log);
+            var invalidResult = ValidateRequest(context, req, principal, log);
 
-            if (!requestValid)
+            if (invalidResult is not null)
             {
                 return invalidResult;
             }
+
+            var result = new ListResponse();
 
             try
             {
                 result.UrlList = await _storageTableHelper.GetAllShortUrlEntities();
                 result.UrlList = result.UrlList.Where(p => !(p.IsArchived ?? false)).ToList();
 
-                string customDomain = this._configuration.GetValue<string>("customDomain");
-
-                var host = string.IsNullOrEmpty(customDomain) ? req.RequestUri.GetLeftPart(UriPartial.Authority) : customDomain;
+                var host = this._configuration.UseCustomDomain ? req.RequestUri.GetLeftPart(UriPartial.Authority) : this._configuration.CustomDomain;
                 foreach (var shortUrl in result.UrlList)
                 {
                     shortUrl.ShortUrl = Utility.GetShortUrl(host, shortUrl.RowKey);
@@ -87,17 +88,17 @@ namespace Cloud5mins.Function
             }
         }
 
-        public override async Task<(bool isValidRequest, IActionResult invalidResult, T requestType)> ValidateRequestAsync<T>(ExecutionContext context, HttpRequestMessage req, ClaimsPrincipal principal, ILogger log)
+        public IActionResult ValidateRequest(ExecutionContext context, HttpRequestMessage req, ClaimsPrincipal principal, ILogger log)
         {
             var invalidRequest = Utility.CheckUserImpersonatedAuth(principal, log);
             if (invalidRequest != null)
             {
-                return (false, invalidRequest, null as T);
+                return invalidRequest;
             }
 
             LogAuthenticatedUser(principal, context, log);
 
-            return (true, null, new T());
+            return null;
         }
     }
 }

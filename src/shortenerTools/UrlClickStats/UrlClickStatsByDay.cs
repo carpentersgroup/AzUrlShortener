@@ -38,6 +38,7 @@ using System.Text.Json;
 using System.IO;
 using System.Linq;
 using shortenerTools.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cloud5mins.Function
 {
@@ -45,12 +46,12 @@ namespace Cloud5mins.Function
     {
         private readonly IStorageTableHelper _storageTableHelper;
 
-        private readonly IConfiguration _configuration;
+        private readonly UrlShortenerConfiguration _configuration;
 
-        public UrlClickStatsByDay(IStorageTableHelper storageTableHelper, IConfiguration configuration)
+        public UrlClickStatsByDay(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration)
         {
             this._storageTableHelper = storageTableHelper;
-            this._configuration = configuration;
+            this._configuration = configuration.Value;
         }
 
         [FunctionName("UrlClickStatsByDay")]
@@ -94,9 +95,7 @@ namespace Cloud5mins.Function
                                                 Count = stat.Count()
                                             }).OrderBy(s => DateTime.Parse(s.DateClicked).Date).ToList<ClickDate>();
 
-                string customDomain = this._configuration.GetValue<string>("customDomain");
-
-                var host = string.IsNullOrEmpty(customDomain) ? req.RequestUri.GetLeftPart(UriPartial.Authority) : customDomain;
+                var host = this._configuration.UseCustomDomain ? req.RequestUri.GetLeftPart(UriPartial.Authority) : this._configuration.CustomDomain;
 
                 result.Url = Utility.GetShortUrl(host, clickStatsRequest.Vanity);
             }

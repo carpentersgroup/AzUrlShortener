@@ -23,13 +23,13 @@ namespace shortenerTools.Implementations
 
         public async Task<UserIpResponse> GetUserIpAsync(string ip, CancellationToken cancellationToken)
         {
-            var response = await _httpClient.GetAsync($"/json/{ip}", cancellationToken);
+            var response = await _httpClient.GetAsync($"/json/{ip}", cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                using (var stream = await response.Content.ReadAsStreamAsync())
+                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 {
-                    var userip = await System.Text.Json.JsonSerializer.DeserializeAsync<UserIpResponse>(stream);
+                    var userip = await System.Text.Json.JsonSerializer.DeserializeAsync<UserIpResponse>(stream).ConfigureAwait(false);
 
                     logger.LogInformation($"Hit from {userip.CountryName}");
 

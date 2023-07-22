@@ -14,12 +14,10 @@ namespace shortenerTools.WellKnown
 {
     internal class WellKnownFunction
     {
-        private readonly IConfiguration _configuration;
         private readonly IStorageTableHelper _storageTableHelper;
 
-        public WellKnownFunction(IConfiguration configuration, IStorageTableHelper storageTableHelper)
+        public WellKnownFunction(IStorageTableHelper storageTableHelper)
         {
-            _configuration = configuration;
             _storageTableHelper = storageTableHelper;
         }
 

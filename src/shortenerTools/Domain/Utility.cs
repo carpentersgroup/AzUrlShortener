@@ -5,9 +5,9 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Net;
+using Microsoft.Extensions.Primitives;
+using System;
 
 namespace Cloud5mins.domain
 {
@@ -19,21 +19,14 @@ namespace Cloud5mins.domain
         //sets the length of the unique code to add to vanity
         private const int MinVanityCodeLength = 5;
 
-        public static async Task<string> GetValidEndUrl(string vanity, IStorageTableHelper stgHelper)
+        public static async Task<string> GetValidEndUrl(IStorageTableHelper stgHelper)
         {
-            if (string.IsNullOrEmpty(vanity))
-            {
-                var newKey = await stgHelper.GetNextTableId();
-                string GetCode() => Encode(newKey);
-                if (await stgHelper.IfShortUrlEntityExistByVanity(GetCode()))
-                    return await GetValidEndUrl(vanity, stgHelper);
+            var newKey = await stgHelper.GetNextTableId().ConfigureAwait(false);
+            string code = Encode(newKey);
+            if (await stgHelper.IfShortUrlEntityExistByVanity(code).ConfigureAwait(false))
+                return await GetValidEndUrl(stgHelper).ConfigureAwait(false);
 
-                return string.Join(string.Empty, GetCode());
-            }
-            else
-            {
-                return string.Join(string.Empty, vanity);
-            }
+            return code;
         }
 
         public static string Encode(int i)
@@ -53,17 +46,19 @@ namespace Cloud5mins.domain
         //(not entirely secure but not sequential so generally not guessable)
         public static string GenerateUniqueRandomToken(int uniqueId)
         {
-            using (var generator = new RNGCryptoServiceProvider())
+            //minimum size I would suggest is 5, longer the better but we want short URLs!
+            var bytes = new byte[MinVanityCodeLength];
+            System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+            Span<char> characters = stackalloc char[MinVanityCodeLength];
+            //iterate backwards through bytes
+            for (int i = bytes.Length - 1; i >= 0; i--)
             {
-                //minimum size I would suggest is 5, longer the better but we want short URLs!
-                var bytes = new byte[MinVanityCodeLength];
-                generator.GetBytes(bytes);
-                var chars = bytes
-                    .Select(b => ConversionCode[b % ConversionCode.Length]);
-                var token = new string(chars.ToArray());
-                var reversedToken = string.Join(string.Empty, token.Reverse());
-                return uniqueId + reversedToken;
+                //modulus to get remainder of value divided by base
+                int index = bytes[i] % Base;
+                //set byte to the value of the index in the conversion code
+                characters[i] = ConversionCode[index];
             }
+            return uniqueId + characters.ToString();
         }
 
         public static IActionResult CheckAuthRole(ClaimsPrincipal principal, ILogger log, string requiredRole)
@@ -176,19 +171,40 @@ namespace Cloud5mins.domain
 
         public static IPAddress GetClientIpn(this Microsoft.AspNetCore.Http.HttpRequest request)
         {
-            IPAddress result = null;
             if (request.Headers.TryGetValue("X-Forwarded-For", out Microsoft.Extensions.Primitives.StringValues values))
             {
-                var ipn = values.FirstOrDefault().Split(new char[] { ',' }).FirstOrDefault().Split(new char[] { ':' }).FirstOrDefault();
-                IPAddress.TryParse(ipn, out result);
+                if (StringValues.IsNullOrEmpty(values))
+                {
+                    return GetRemoteAddress(request);
+                }
+
+                string firstForwardedForHeader = values.FirstOrDefault();
+                if(string.IsNullOrEmpty(firstForwardedForHeader))
+                {
+                    return GetRemoteAddress(request);
+                }
+
+                string[] firstForwardedHeaderValue = firstForwardedForHeader.Split(',');
+
+                string address = firstForwardedHeaderValue.FirstOrDefault();
+                if (string.IsNullOrEmpty(address))
+                {
+                    return GetRemoteAddress(request);
+                }
+
+                string ipn = address.Split(':').FirstOrDefault();
+                if(IPAddress.TryParse(ipn, out IPAddress result))
+                {
+                    return result;
+                }
             }
 
-            if(result == null)
+            return GetRemoteAddress(request);
+
+            static IPAddress GetRemoteAddress(Microsoft.AspNetCore.Http.HttpRequest request)
             {
-                result = request.HttpContext.Connection.RemoteIpAddress;
+                return request.HttpContext.Connection.RemoteIpAddress;
             }
-
-            return result;
         }
     }
 }

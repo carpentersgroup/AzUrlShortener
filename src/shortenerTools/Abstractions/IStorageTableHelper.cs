@@ -10,7 +10,6 @@ namespace shortenerTools.Abstractions
         Task<List<ShortUrlEntity>> GetAllShortUrlEntities();
         Task<List<ClickStatsEntity>> GetAllStatsByVanity(string vanity);
         Task<bool> IfShortUrlEntityExist(ShortUrlEntity row);
-        Task<ShortUrlEntity> UpdateShortUrlEntity(ShortUrlEntity urlEntity);
         Task<ShortUrlEntity> ArchiveShortUrlEntity(ShortUrlEntity urlEntity);
         Task<ShortUrlEntity> SaveShortUrlEntity(ShortUrlEntity newShortUrl);
         void SaveClickStatsEntity(ClickStatsEntity newStats);

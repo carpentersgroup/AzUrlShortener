@@ -1,33 +1,39 @@
 ﻿using Microsoft.Azure.Cosmos.Table;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace shortenerTools.Infrastructure
 {
-    public class EntityJsonPropertyConverter
+    public static class EntityJsonPropertyConverter
     {
         public static void Serialize<TEntity>(TEntity entity, IDictionary<string, EntityProperty> results)
         {
-            entity.GetType().GetProperties()
-                .Where(x => x.GetCustomAttributes(typeof(EntityJsonPropertyConverterAttribute), false).Any())
-                .ToList()
-                .ForEach(x => results.Add(x.Name, new EntityProperty(JsonConvert.SerializeObject(x.GetValue(entity)))));
+            var convertibleProperties = entity.GetType().GetProperties()
+                .Where(x => x.GetCustomAttributes(typeof(EntityJsonPropertyConverterAttribute), false).Any());
+
+
+            foreach (System.Reflection.PropertyInfo property in convertibleProperties)
+            {
+                string input = System.Text.Json.JsonSerializer.Serialize(property.GetValue(entity));
+                EntityProperty entityProperty = new EntityProperty(input);
+                results.Add(property.Name, entityProperty);
+            }
         }
 
         public static void Deserialize<TEntity>(TEntity entity, IDictionary<string, EntityProperty> properties)
         {
-            entity.GetType().GetProperties()
-                .Where(x => x.GetCustomAttributes(typeof(EntityJsonPropertyConverterAttribute), false).Any())
-                .ToList()
-                .ForEach(x =>
+            var convertibleProperties = entity.GetType().GetProperties()
+                .Where(x => x.GetCustomAttributes(typeof(EntityJsonPropertyConverterAttribute), false).Any());
+
+            foreach (System.Reflection.PropertyInfo property in convertibleProperties)
+            {
+                if (properties.ContainsKey(property.Name))
                 {
-                    if (properties.ContainsKey(x.Name))
-                    {
-                        x.SetValue(entity,
-                            JsonConvert.DeserializeObject(properties[x.Name]?.StringValue, x.PropertyType));
-                    }
-                });
+                    string stringValue = properties[property.Name]?.StringValue;
+                    object value = System.Text.Json.JsonSerializer.Deserialize(stringValue, property.PropertyType);
+                    property.SetValue(entity, value);
+                }
+            }
         }
     }
 }

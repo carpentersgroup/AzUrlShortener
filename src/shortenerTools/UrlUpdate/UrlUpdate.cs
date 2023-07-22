@@ -34,6 +34,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using shortenerTools.Abstractions;
 using System;
 using System.Net;
@@ -47,12 +48,12 @@ namespace Cloud5mins.Function
     {
         private readonly IStorageTableHelper _storageTableHelper;
 
-        private readonly IConfiguration _configuration;
+        private readonly UrlShortenerConfiguration _configuration;
 
-        public UrlUpdate(IStorageTableHelper storageTableHelper, IConfiguration configuration)
+        public UrlUpdate(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration)
         {
             _storageTableHelper = storageTableHelper;
-            this._configuration = configuration;
+            this._configuration = configuration.Value;
         }
 
         [FunctionName("UrlUpdate")]
@@ -86,9 +87,9 @@ namespace Cloud5mins.Function
 
             try
             {
-                var result = await _storageTableHelper.UpdateShortUrlEntity(shortUrlEntity);
+                var result = await _storageTableHelper.SaveShortUrlEntity(shortUrlEntity);
                 
-                string customDomain = this._configuration.GetValue<string>("customDomain");
+                string customDomain = this._configuration.CustomDomain;
 
                 var host = string.IsNullOrEmpty(customDomain) ? req.RequestUri.GetLeftPart(UriPartial.Authority) : customDomain;
 

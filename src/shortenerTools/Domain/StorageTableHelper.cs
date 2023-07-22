@@ -2,7 +2,6 @@ using Microsoft.Azure.Cosmos.Table;
 using shortenerTools.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace Cloud5mins.domain
@@ -18,18 +17,21 @@ namespace Cloud5mins.domain
         
         private CloudTable GetStatsTable()
         {
-            var table = GetTable("ClickStats");
+            const string TableName = "ClickStats";
+            var table = GetTable(TableName);
             return table;
         }
         private CloudTable GetUrlsTable()
         {
-            var table = GetTable("UrlsDetails");
+            const string TableName = "UrlsDetails";
+            var table = GetTable(TableName);
             return table;
         }
 
         private CloudTable GetWellKnownTable()
         {
-            CloudTable table = GetTable("WellKnown");
+            const string TableName = "WellKnown";
+            CloudTable table = GetTable(TableName);
             return table;
         }
 
@@ -44,7 +46,7 @@ namespace Cloud5mins.domain
         public async Task<string> GetWellKnownContent(string filename)
         {
             TableOperation selOperation = TableOperation.Retrieve<WellKnownEntity>("WellKnown", filename);
-            TableResult result = await GetWellKnownTable().ExecuteAsync(selOperation);
+            TableResult result = await GetWellKnownTable().ExecuteAsync(selOperation).ConfigureAwait(false);
             WellKnownEntity wellKnown = result.Result as WellKnownEntity;
             return wellKnown.Content;
         }
@@ -52,7 +54,7 @@ namespace Cloud5mins.domain
         public async Task<ShortUrlEntity> GetShortUrlEntity(ShortUrlEntity row)
         {
             var selOperation = TableOperation.Retrieve<ShortUrlEntity>(row.PartitionKey, row.RowKey);
-            var result = await GetUrlsTable().ExecuteAsync(selOperation);
+            var result = await GetUrlsTable().ExecuteAsync(selOperation).ConfigureAwait(false);
             var eShortUrl = result.Result as ShortUrlEntity;
             return eShortUrl;
         }
@@ -60,20 +62,40 @@ namespace Cloud5mins.domain
         public async Task<List<ShortUrlEntity>> GetAllShortUrlEntities()
         {
             var tblUrls = GetUrlsTable();
-            TableContinuationToken token = null;
-            var lstShortUrl = new List<ShortUrlEntity>();
-            do
-            {
-                // Retrieving all entities that are NOT the NextId entity 
-                // (it's the only one in the partition "KEY")
-                var rangeQuery = new TableQuery<ShortUrlEntity>().Where(
-                    filter: TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.NotEqual, "KEY"));
 
-                var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(rangeQuery, token);
-                lstShortUrl.AddRange(queryResult.Results);
-                token = queryResult.ContinuationToken;
-            } while (token != null);
+            string filter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.NotEqual, "KEY");
+
+            // Retrieving all entities that are NOT the NextId entity 
+            // (it's the only one in the partition "KEY")
+            var rangeQuery = new TableQuery<ShortUrlEntity>().Where(filter);
+
+            var lstShortUrl = await SegmentedQueryAsync<ShortUrlEntity>(tblUrls, rangeQuery).ConfigureAwait(false);
+
             return lstShortUrl;
+        }
+
+        private async Task<List<T>> SegmentedQueryAsync<T>(CloudTable table, TableQuery<T> query) where T : TableEntity, new()
+        {
+            List<T> results = new List<T>();
+
+            TableQuerySegment<T> result = await table.ExecuteQuerySegmentedAsync<T>(query, null).ConfigureAwait(false);
+
+            results.AddRange(result);
+
+            while (result.ContinuationToken != null)
+            {
+                result = await table.ExecuteQuerySegmentedAsync<T>(query, result.ContinuationToken).ConfigureAwait(false);
+
+                results.AddRange(result);
+            }
+
+            return results;
+        }
+
+        private static async Task<T> SegmentedQuerySingleAsync<T>(CloudTable table, TableQuery<T> query) where T : TableEntity, new()
+        {
+            var queryResult = await table.ExecuteQuerySegmentedAsync(query, null).ConfigureAwait(false);
+            return queryResult.Results.FirstOrDefault();
         }
 
         public async Task<List<ClickStatsEntity>> GetAllStatsByVanity(string vanity)
@@ -93,7 +115,7 @@ namespace Cloud5mins.domain
                     filter: TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, vanity));
                 }
 
-                var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(rangeQuery, token);
+                var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(rangeQuery, token).ConfigureAwait(false);
                 lstShortUrl.AddRange(queryResult.Results);
                 token = queryResult.ContinuationToken;
             } while (token != null);
@@ -108,53 +130,35 @@ namespace Cloud5mins.domain
         public async Task<ShortUrlEntity> GetShortUrlEntityByVanity(string vanity)
         {
             var tblUrls = GetUrlsTable();
-            TableContinuationToken token = null;
-            ShortUrlEntity shortUrlEntity = null;
-            do
-            {
-                TableQuery<ShortUrlEntity> query = new TableQuery<ShortUrlEntity>().Where(
-                    filter: TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, vanity));
-                var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(query, token);
-                shortUrlEntity = queryResult.Results.FirstOrDefault();
-            } while (token != null);
-
-            return shortUrlEntity;
+            TableQuery<ShortUrlEntity> query = new TableQuery<ShortUrlEntity>().Where(
+                            filter: TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, vanity));
+            return await SegmentedQuerySingleAsync(tblUrls, query).ConfigureAwait(false);
         }
 
         public async Task<bool> IfShortUrlEntityExistByVanity(string vanity)
         {
-            ShortUrlEntity shortUrlEntity = await GetShortUrlEntityByVanity(vanity);
-            return (shortUrlEntity != null);
+            ShortUrlEntity shortUrlEntity = await GetShortUrlEntityByVanity(vanity).ConfigureAwait(false);
+            return shortUrlEntity != null;
         }
 
         public async Task<bool> IfShortUrlEntityExist(ShortUrlEntity row)
         {
-            var eShortUrl = await GetShortUrlEntity(row);
-            return (eShortUrl != null);
-        }
-
-        public async Task<ShortUrlEntity> UpdateShortUrlEntity(ShortUrlEntity urlEntity)
-        {
-            var originalUrl = await GetShortUrlEntity(urlEntity);
-            originalUrl.Url = urlEntity.Url;
-            originalUrl.Title = urlEntity.Title;
-            originalUrl.Schedules = urlEntity.Schedules;
-
-            return await SaveShortUrlEntity(originalUrl);
+            var eShortUrl = await GetShortUrlEntity(row).ConfigureAwait(false);
+            return eShortUrl != null;
         }
 
         public async Task<ShortUrlEntity> ArchiveShortUrlEntity(ShortUrlEntity urlEntity)
         {
-            var originalUrl = await GetShortUrlEntity(urlEntity);
+            var originalUrl = await GetShortUrlEntity(urlEntity).ConfigureAwait(false);
             originalUrl.IsArchived = true;
 
-            return await SaveShortUrlEntity(originalUrl);
+            return await SaveShortUrlEntity(originalUrl).ConfigureAwait(false);
         }
 
         public async Task<ShortUrlEntity> SaveShortUrlEntity(ShortUrlEntity newShortUrl)
         {
             var insOperation = TableOperation.InsertOrMerge(newShortUrl);
-            var result = await GetUrlsTable().ExecuteAsync(insOperation);
+            var result = await GetUrlsTable().ExecuteAsync(insOperation).ConfigureAwait(false);
             var eShortUrl = result.Result as ShortUrlEntity;
             return eShortUrl;
         }
@@ -162,14 +166,14 @@ namespace Cloud5mins.domain
         public async void SaveClickStatsEntity(ClickStatsEntity newStats)
         {
             var insOperation = TableOperation.InsertOrMerge(newStats);
-            await GetStatsTable().ExecuteAsync(insOperation);
+            await GetStatsTable().ExecuteAsync(insOperation).ConfigureAwait(false);
         }
 
         public async Task<int> GetNextTableId()
         {
             //Get current ID
             var selOperation = TableOperation.Retrieve<NextId>("1", "KEY");
-            var result = await GetUrlsTable().ExecuteAsync(selOperation);
+            var result = await GetUrlsTable().ExecuteAsync(selOperation).ConfigureAwait(false);
 
             if (!(result.Result is NextId entity))
             {
@@ -186,7 +190,7 @@ namespace Cloud5mins.domain
             var updOperation = TableOperation.InsertOrMerge(entity);
 
             // Execute the operation.
-            await GetUrlsTable().ExecuteAsync(updOperation);
+            await GetUrlsTable().ExecuteAsync(updOperation).ConfigureAwait(false);
 
             return entity.Id;
         }

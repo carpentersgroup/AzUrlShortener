@@ -2,6 +2,7 @@ using System;
 using adminBlazorWebsite.Abstractions;
 using adminBlazorWebsite.Areas.Identity;
 using adminBlazorWebsite.Data;
+using Cloud5mins.Config;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -39,6 +40,13 @@ namespace adminBlazorWebsite
             services.AddHttpClient<IUrlShortenerService, UrlShortenerService>(client =>
             {
                 client.BaseAddress = new Uri($"{Config["azFunctionUrl"]}/api/");
+            });
+            services.Configure<UrlShortenerConfiguration>(config =>
+            {
+                config.CustomDomain = Config.GetValue<string>("customDomain");
+                config.UrlShortenApiRoleName = Config.GetValue<string>("urlShortenApiRoleName");
+                config.EnableApiAccess = Config.GetValue<bool>("enableApiAccess");
+                config.Code = Config.GetValue<string>("code");
             });
         }
 

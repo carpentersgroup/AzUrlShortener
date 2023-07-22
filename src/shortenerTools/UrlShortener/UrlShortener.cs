@@ -34,24 +34,24 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Cloud5mins.Function
 {
-
     public class UrlShortener : FunctionBase
     {
         private readonly IStorageTableHelper _storageTableHelper;
-        private readonly IConfiguration _configuration;
+        private readonly UrlShortenerConfiguration _urlShortenerConfiguration;
 
-        public UrlShortener(IStorageTableHelper storageTableHelper, IConfiguration configuration)
+        public UrlShortener(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> options)
         {
             _storageTableHelper = storageTableHelper;
-            this._configuration = configuration;
+            _urlShortenerConfiguration = options.Value;
         }
 
         [FunctionName("UrlShortener")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequestMessage req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
         ILogger log,
         ExecutionContext context,
         ClaimsPrincipal principal)
@@ -59,13 +59,19 @@ namespace Cloud5mins.Function
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
             // Validation of the inputs
-            var (requestValid, invalidResult, shortRequest) = await ValidateRequestAsync<ShortRequest>(context, req, principal, log);
+            var invalidResult = this.ValidateRequest(context, req, principal, log);
 
-            if (!requestValid)
+            if (invalidResult != null)
             {
                 return invalidResult;
             }
-            
+
+            var shortRequest = await req.Content.ReadAsAsync<ShortRequest>();
+            if (shortRequest == null)
+            {
+                return new BadRequestResult();
+            }
+
             // If the Url parameter only contains whitespaces or is empty return with BadRequest.
             if (string.IsNullOrWhiteSpace(shortRequest.Url))
             {
@@ -81,31 +87,19 @@ namespace Cloud5mins.Function
             try
             {
                 var longUrl = shortRequest.Url.Trim();
-                var vanity = string.IsNullOrWhiteSpace(shortRequest.Vanity) ? "" : shortRequest.Vanity.Trim();
                 var title = string.IsNullOrWhiteSpace(shortRequest.Title) ? "" : shortRequest.Title.Trim();
 
+                string shortUrl = string.IsNullOrWhiteSpace(shortRequest.Vanity) ? await Utility.GetValidEndUrl(_storageTableHelper) : shortRequest.Vanity.Trim();
 
-                ShortUrlEntity newRow;
-
-                if (!string.IsNullOrEmpty(vanity))
+                ShortUrlEntity newRow = new ShortUrlEntity(longUrl, shortUrl, title, shortRequest.Schedules);
+                if (await _storageTableHelper.IfShortUrlEntityExist(newRow))
                 {
-
-                    newRow = new ShortUrlEntity(longUrl, vanity, title, shortRequest.Schedules);
-                    if (await _storageTableHelper.IfShortUrlEntityExist(newRow))
-                    {
-                        return new ConflictObjectResult("This Short URL already exist.");
-                    }
-                }
-                else
-                {
-                    newRow = new ShortUrlEntity(longUrl, await Utility.GetValidEndUrl(vanity, _storageTableHelper), title, shortRequest.Schedules);
+                    return new ConflictObjectResult("This Short URL already exist.");
                 }
 
                 await _storageTableHelper.SaveShortUrlEntity(newRow);
 
-                string customDomain = this._configuration.GetValue<string>("customDomain");
-
-                var host = string.IsNullOrEmpty(customDomain) ? req.RequestUri.GetLeftPart(UriPartial.Authority) : customDomain;
+                var host = this._urlShortenerConfiguration.UseCustomDomain ? req.RequestUri.GetLeftPart(UriPartial.Authority) : this._urlShortenerConfiguration.CustomDomain;
 
                 log.LogInformation($"-> host = {host}");
 
@@ -128,17 +122,14 @@ namespace Cloud5mins.Function
             }
         }
 
-        public override async Task<(bool isValidRequest, IActionResult invalidResult, T requestType)> ValidateRequestAsync<T>(
+        public IActionResult ValidateRequest(
             ExecutionContext context, HttpRequestMessage req, ClaimsPrincipal principal, ILogger log)
         {
             IActionResult invalidRequest;
-            bool apiAccessEnabled = this._configuration.GetValue<bool>("enableApiAccess");
 
-            if (apiAccessEnabled && Utility.IsAppOnlyToken(principal, log))
+            if (this._urlShortenerConfiguration.EnableApiAccess && Utility.IsAppOnlyToken(principal, log))
             {
-                string requiredRole = this._configuration.GetValue<string>("urlShortenApiRoleName");
-
-                invalidRequest = Utility.CheckAuthRole(principal, log, requiredRole);
+                invalidRequest = Utility.CheckAuthRole(principal, log, this._urlShortenerConfiguration.UrlShortenApiRoleName);
             }
             else
             {
@@ -147,7 +138,7 @@ namespace Cloud5mins.Function
 
             if (invalidRequest != null)
             {
-                return (false, invalidRequest, null as T);
+                return invalidRequest;
             }
             else
             {
@@ -164,25 +155,14 @@ namespace Cloud5mins.Function
                 }
             }
 
-            if (invalidRequest != null)
-            {
-                return (false, invalidRequest, null as T);
-            }
-
             LogAuthenticatedUser(principal, context, log);
 
             if (req == null)
             {
-                return (false, new NotFoundResult(), null);
+                return new NotFoundResult();
             }
 
-            var result = await req.Content.ReadAsAsync<T>();
-            if (result == null)
-            {
-                return (false, new NotFoundResult(), null);
-            }
-
-            return (true, null, result);
+            return null;
         }
     }
 }

@@ -1,6 +1,7 @@
 using adminBlazorWebsite.Abstractions;
+using Cloud5mins.Config;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
+using Microsoft.Extensions.Options;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -12,12 +13,12 @@ namespace adminBlazorWebsite.Data
     public class UrlShortenerService : IUrlShortenerService
     {
         private readonly HttpClient _httpClient;
-        public IConfigurationRoot Config { get; set; }
+        private readonly UrlShortenerConfiguration _configuration;
 
-        public UrlShortenerService(HttpClient httpClient)
+        public UrlShortenerService(HttpClient httpClient, IOptions<UrlShortenerConfiguration> configuration)
         {
             _httpClient = httpClient;
-            Config = GetConfiguration();
+            _configuration = configuration.Value;
         }
 
         public async Task<ShortUrlList> GetUrlList()
@@ -30,23 +31,23 @@ namespace adminBlazorWebsite.Data
             using var response = await _httpClient
                 .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
-            var resultList = response.Content.ReadAsStringAsync().Result;
-            return JsonConvert.DeserializeObject<ShortUrlList>(resultList);
+            var results = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            return await System.Text.Json.JsonSerializer.DeserializeAsync<ShortUrlList>(results).ConfigureAwait(false);
         }
 
         public async Task<ShortUrlList> CreateShortUrl(ShortUrlRequest shortUrlRequest)
         {
-            return await SendAsync<ShortUrlList, ShortUrlRequest>(shortUrlRequest, "UrlShortener", HttpMethod.Post);
+            return await SendAsync<ShortUrlList, ShortUrlRequest>(shortUrlRequest, "UrlShortener", HttpMethod.Post).ConfigureAwait(false);
         }
 
         public async Task<ShortUrlEntity> UpdateShortUrl(ShortUrlEntity editedUrl)
         {
-            return await SendAsync(editedUrl, "UrlUpdate", HttpMethod.Post);
+            return await SendAsync(editedUrl, "UrlUpdate", HttpMethod.Post).ConfigureAwait(false);
         }
 
         public async Task<ShortUrlEntity> ArchiveShortUrl(ShortUrlEntity archivedUrl)
         {
-            return await SendAsync(archivedUrl, "UrlArchive", HttpMethod.Post);
+            return await SendAsync(archivedUrl, "UrlArchive", HttpMethod.Post).ConfigureAwait(false);
         }
 
         private async Task<TOut> SendAsync<TOut, TIn>(TIn entity, string functionName, HttpMethod method)
@@ -62,21 +63,22 @@ namespace adminBlazorWebsite.Data
             using var response = await _httpClient
                 .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
-            var resultList = response.Content.ReadAsStringAsync().Result;
-            return JsonConvert.DeserializeObject<TOut>(resultList);
+
+            var results = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            return await System.Text.Json.JsonSerializer.DeserializeAsync<TOut>(results).ConfigureAwait(false);
         }
 
         private async Task<T> SendAsync<T>(T entity, string functionName, HttpMethod method)
         {
-            return await SendAsync<T, T>(entity, functionName, method);
+            return await SendAsync<T, T>(entity, functionName, method).ConfigureAwait(false);
         }
 
-        private static string GetFunctionUrl(string functionName)
+        private string GetFunctionUrl(string functionName)
         {
             var funcUrl = new StringBuilder();
             funcUrl.Append(functionName);
 
-            var code = GetConfiguration()["code"];
+            var code = this._configuration.Code;
             if (string.IsNullOrWhiteSpace(code)) return funcUrl.ToString();
 
             funcUrl.Append("?code=");
@@ -85,21 +87,11 @@ namespace adminBlazorWebsite.Data
             return funcUrl.ToString();
         }
 
-        private static IConfigurationRoot GetConfiguration()
-        {
-            var config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables()
-                .Build();
-            return config;
-        }
-
         private static StringContent CreateHttpContent(object content)
         {
             if (content == null) return null;
 
-            var jsonString = JsonConvert.SerializeObject(content);
+            var jsonString = System.Text.Json.JsonSerializer.Serialize(content);
             var httpContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
             return httpContent;
