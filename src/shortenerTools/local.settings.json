@@ -8,6 +8,6 @@
     "customDomain": "https://c5m.ca",
     "enableApiAccess": true,
     "urlShortenApiRoleName": "Url.Shorten",
-    "IpLocationService:Url": "https://freegeoip.app/"
+    "IpLocationService:Url": "https://api.ipbase.com/v1"
   }
 }
