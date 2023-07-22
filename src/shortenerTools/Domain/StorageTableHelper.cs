@@ -1,4 +1,5 @@
 using Microsoft.Azure.Cosmos.Table;
+using Microsoft.Extensions.Logging;
 using shortenerTools.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,17 +10,28 @@ namespace Cloud5mins.domain
     public class StorageTableHelper : IStorageTableHelper
     {
         private readonly CloudTableClient _cloudTableClient;
-        
-        public StorageTableHelper(CloudTableClient cloudTableClient)
+        private readonly ILogger<StorageTableHelper> _logger;
+
+        public StorageTableHelper(CloudTableClient cloudTableClient, ILogger<StorageTableHelper> logger)
         {
             _cloudTableClient = cloudTableClient;
-            CreateTables();
+            _logger = logger;
+            TryCreateTables();
         }
 
-        public void CreateTables()
+        public bool TryCreateTables()
         {
-            GetStatsTable().CreateIfNotExists();
-            GetUrlsTable().CreateIfNotExists();
+            try
+            {
+                GetStatsTable().CreateIfNotExists();
+                GetUrlsTable().CreateIfNotExists();
+                return true;
+            }
+            catch (System.Exception ex)
+            { 
+                this._logger.LogError(ex, "Error creating tables");
+                return false; 
+            }
         }
         
         private CloudTable GetStatsTable()

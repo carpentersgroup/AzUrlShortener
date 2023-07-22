@@ -38,8 +38,9 @@ namespace shortenerTools
             {
                 var storageAccount = CloudStorageAccount.Parse(configuration.GetSection("UlsDataStorage").Value);
                 var tableClient = storageAccount.CreateCloudTableClient();
-                
-                var storageHelper = new StorageTableHelper(tableClient);
+                var logger = provider.GetService<ILogger<StorageTableHelper>>();
+
+                var storageHelper = new StorageTableHelper(tableClient, logger);
                 return storageHelper;
             });
         }
