@@ -40,17 +40,6 @@ namespace shortenerTools
                 var tableClient = storageAccount.CreateCloudTableClient();
                 
                 var storageHelper = new StorageTableHelper(tableClient);
-                System.Threading.Tasks.Task.Run(async () =>
-                {
-                    try
-                    {
-                        await storageHelper.CreateTables().ConfigureAwait(false);
-                    }
-                    catch(Exception ex)
-                    {
-                        provider.GetService<Microsoft.Extensions.Logging.ILogger>()?.LogError(ex, "Error creating tables");
-                    }
-                });
                 return storageHelper;
             });
         }

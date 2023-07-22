@@ -13,13 +13,13 @@ namespace Cloud5mins.domain
         public StorageTableHelper(CloudTableClient cloudTableClient)
         {
             _cloudTableClient = cloudTableClient;
+            CreateTables();
         }
 
-        public async Task CreateTables()
+        public void CreateTables()
         {
-            await GetStatsTable().CreateIfNotExistsAsync().ConfigureAwait(false);
-            await GetUrlsTable().CreateIfNotExistsAsync().ConfigureAwait(false);
-            await GetWellKnownTable().CreateIfNotExistsAsync().ConfigureAwait(false);
+            GetStatsTable().CreateIfNotExists();
+            GetUrlsTable().CreateIfNotExists();
         }
         
         private CloudTable GetStatsTable()
@@ -39,6 +39,7 @@ namespace Cloud5mins.domain
         {
             const string TableName = "WellKnown";
             CloudTable table = GetTable(TableName);
+            table.CreateIfNotExists();
             return table;
         }
 
