@@ -11,7 +11,7 @@ namespace shortenerTools.Abstractions
     public abstract class FunctionBase
     {
         public virtual async Task<(bool isValidRequest, IActionResult invalidResult, T requestType)> ValidateRequestAsync<T>(
-            ExecutionContext context, HttpRequestMessage req, ClaimsPrincipal principal, ILogger log) where T : class, new()
+            HttpRequestMessage req, ClaimsPrincipal principal, ILogger log) where T : class, new()
         {
             var invalidRequest = Utility.CheckUserImpersonatedAuth(principal, log);
 
@@ -19,8 +19,6 @@ namespace shortenerTools.Abstractions
             {
                 return (false, invalidRequest, null as T);
             }
-
-            LogAuthenticatedUser(principal, context, log);
 
             if (req == null)
             {
@@ -36,10 +34,19 @@ namespace shortenerTools.Abstractions
             return (true, null, result);
         }
 
-        protected static void LogAuthenticatedUser(ClaimsPrincipal principal, ExecutionContext context, ILogger log)
+        public virtual async Task<T> ParseRequestAsync<T>(HttpRequestMessage req) where T : class, new()
         {
-            var userId = principal.FindFirst(ClaimTypes.NameIdentifier).Value;
-            log.LogInformation("{functionName} successfully Authenticated user {user}.", context.FunctionName, userId);
+            if (req == null)
+            {
+                return null;
+            }
+
+            return await req.Content.ReadAsAsync<T>().ConfigureAwait(false);
+        }
+
+        public virtual IActionResult ValidateAuth(ClaimsPrincipal principal, ILogger log)
+        {
+            return Utility.CheckUserImpersonatedAuth(principal, log);
         }
     }
 }

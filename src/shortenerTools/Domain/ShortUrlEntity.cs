@@ -45,8 +45,8 @@ namespace Cloud5mins.domain
         {
             PartitionKey = endUrl.First().ToString();
             RowKey = endUrl;
-            Url = longUrl;
-            Title = title;
+            Url = longUrl.Trim();
+            Title = title.Trim();
             ClicksByCountry = new Dictionary<string, int>();
             IsArchived = false;
             SchedulesPropertyRaw = schedules;

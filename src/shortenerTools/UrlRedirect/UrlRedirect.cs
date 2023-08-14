@@ -29,12 +29,11 @@ namespace Cloud5mins.Function
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "UrlRedirect/{shortUrl}")] Microsoft.AspNetCore.Http.HttpRequest req,
             string shortUrl,
-            ExecutionContext context,
             ILogger log)
         {
             log.LogInformation($"C# HTTP trigger function processed for Url: {shortUrl}");
 
-            var redirectUrl = _configuration["defaultRedirectUrl"];
+            string redirectUrl;
 
             if (!string.IsNullOrWhiteSpace(shortUrl))
             {
@@ -48,15 +47,14 @@ namespace Cloud5mins.Function
                     await SetUrlClickStatsAsync(newUrl, req, log);
                     _storageTableHelper.SaveClickStatsEntity(new ClickStatsEntity(newUrl.RowKey));
                     await _storageTableHelper.SaveShortUrlEntity(newUrl);
-                    redirectUrl = WebUtility.UrlDecode(newUrl.Url);
+                    return new RedirectResult(newUrl.Url, false);
                 }
             }
             else
             {
                 log.LogInformation("Bad Link, resorting to fallback.");
+                return new RedirectResult(_configuration["defaultRedirectUrl"], false);
             }
-
-            return new RedirectResult(redirectUrl, false);
         }
 
         private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl, Microsoft.AspNetCore.Http.HttpRequest req, ILogger log)
@@ -70,10 +68,10 @@ namespace Cloud5mins.Function
 
                 log.LogInformation(ip == null ? "Failed to get client ip" : "Got client ip");
 
-                if (ip != null)
-                {
-                    userIpResponse = await _userIpLocationService.GetUserIpAsync(ip.ToString(), CancellationToken.None);
-                }
+                if (ip is null)
+                    return;
+
+                userIpResponse = await _userIpLocationService.GetUserIpAsync(ip.ToString(), CancellationToken.None).ConfigureAwait(false);
             }
             catch
             {

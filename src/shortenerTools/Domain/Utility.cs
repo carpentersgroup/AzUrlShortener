@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Net;
 using Microsoft.Extensions.Primitives;
 using System;
+using Microsoft.Azure.Documents;
 
 namespace Cloud5mins.domain
 {
@@ -16,24 +17,15 @@ namespace Cloud5mins.domain
         private const string ConversionCode = "FjTG0s5dgWkbLf_8etOZqMzNhmp7u6lUJoXIDiQB9-wRxCKyrPcv4En3Y21aASHV";
         private static readonly int Base = ConversionCode.Length;
         //sets the length of the unique code to add to vanity
-        private const int MinVanityCodeLength = 5;
+        private const int MinVanityCodeLength = 7;
 
         public static async Task<string> GetValidEndUrl(IStorageTableHelper stgHelper)
         {
-            var newKey = await stgHelper.GetNextTableId().ConfigureAwait(false);
-            string code = Encode(newKey);
+            string code = GenerateUniqueRandomToken();
             if (await stgHelper.IfShortUrlEntityExistByVanity(code).ConfigureAwait(false))
                 return await GetValidEndUrl(stgHelper).ConfigureAwait(false);
 
             return code;
-        }
-
-        public static string Encode(int i)
-        {
-            if (i == 0)
-                return ConversionCode[0].ToString();
-
-            return GenerateUniqueRandomToken(i);
         }
 
         public static string GetShortUrl(string host, string vanity)
@@ -43,7 +35,7 @@ namespace Cloud5mins.domain
 
         // generates a unique, random, and alphanumeric token for the use as a url 
         //(not entirely secure but not sequential so generally not guessable)
-        public static string GenerateUniqueRandomToken(int uniqueId)
+        public static string GenerateUniqueRandomToken()
         {
             //minimum size I would suggest is 5, longer the better but we want short URLs!
             var bytes = new byte[MinVanityCodeLength];
@@ -57,7 +49,7 @@ namespace Cloud5mins.domain
                 //set byte to the value of the index in the conversion code
                 characters[i] = ConversionCode[index];
             }
-            return uniqueId + characters.ToString();
+            return characters.ToString();
         }
 
         public static IActionResult CheckAuthRole(ClaimsPrincipal principal, ILogger log, string requiredRole)
@@ -115,6 +107,8 @@ namespace Cloud5mins.domain
                 });
             }
 
+            log.LogInformation("Authenticated role.");
+
             return null;
         }
 
@@ -156,7 +150,8 @@ namespace Cloud5mins.domain
                 return new UnauthorizedResult();
             }
 
-            if (principal.FindFirst(ClaimTypes.GivenName) is null)
+            var nameClaim = principal.FindFirst(ClaimTypes.GivenName);
+            if (nameClaim is null)
             {
                 log.LogError("Claim not Found");
                 return new BadRequestObjectResult(new
@@ -165,6 +160,8 @@ namespace Cloud5mins.domain
                     StatusCode = System.Net.HttpStatusCode.BadRequest
                 });
             }
+
+            log.LogInformation("Authenticated user {user}.", nameClaim.Value);
             return null;
         }
 

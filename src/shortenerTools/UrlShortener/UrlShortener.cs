@@ -38,32 +38,36 @@ namespace Cloud5mins.Function
     public class UrlShortener : FunctionBase
     {
         private readonly IStorageTableHelper _storageTableHelper;
-        private readonly UrlShortenerConfiguration _urlShortenerConfiguration;
+        private readonly UrlShortenerConfiguration _configuration;
 
         public UrlShortener(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> options)
         {
             _storageTableHelper = storageTableHelper;
-            _urlShortenerConfiguration = options.Value;
+            _configuration = options.Value;
         }
 
         [FunctionName("UrlShortener")]
         public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
         ILogger log,
-        ExecutionContext context,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
+            if(req == null)
+            {
+                return new BadRequestObjectResult("Request is null.");
+            }
+
             // Validation of the inputs
-            var invalidResult = this.ValidateRequest(context, req, principal, log);
+            var invalidResult = this.ValidateAuth(principal, log);
 
             if (invalidResult != null)
             {
                 return invalidResult;
             }
 
-            var shortRequest = await req.Content.ReadAsAsync<ShortRequest>();
+            var shortRequest = await base.ParseRequestAsync<ShortRequest>(req);
             if (shortRequest == null)
             {
                 return new BadRequestResult();
@@ -86,17 +90,22 @@ namespace Cloud5mins.Function
                 var longUrl = shortRequest.Url.Trim();
                 var title = string.IsNullOrWhiteSpace(shortRequest.Title) ? "" : shortRequest.Title.Trim();
 
-                string shortUrl = string.IsNullOrWhiteSpace(shortRequest.Vanity) ? await Utility.GetValidEndUrl(_storageTableHelper) : shortRequest.Vanity.Trim();
+                bool hasVanitySupplied = string.IsNullOrWhiteSpace(shortRequest.Vanity);
+
+                string shortUrl = hasVanitySupplied ? await Utility.GetValidEndUrl(_storageTableHelper) : shortRequest.Vanity.Trim();
 
                 ShortUrlEntity newRow = new ShortUrlEntity(longUrl, shortUrl, title, shortRequest.Schedules);
-                if (await _storageTableHelper.IfShortUrlEntityExist(newRow))
+                if (hasVanitySupplied && await _storageTableHelper.IfShortUrlEntityExist(newRow))
                 {
                     return new ConflictObjectResult("This Short URL already exist.");
                 }
 
+                const string PARTITION_KEY = "ShortUrlPartition";
+                newRow.PartitionKey = PARTITION_KEY;
+
                 await _storageTableHelper.SaveShortUrlEntity(newRow);
 
-                var host = this._urlShortenerConfiguration.UseCustomDomain ? this._urlShortenerConfiguration.CustomDomain : req.RequestUri.GetLeftPart(UriPartial.Authority);
+                var host = this._configuration.UseCustomDomain ? this._configuration.CustomDomain : req.RequestUri.GetLeftPart(UriPartial.Authority);
 
                 log.LogInformation($"-> host = {host}");
 
@@ -108,8 +117,8 @@ namespace Cloud5mins.Function
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "{functionName} failed due to an unexpected error: {errorMessage}.",
-                    context.FunctionName, ex.GetBaseException().Message);
+                log.LogError(ex, "failed due to an unexpected error: {errorMessage}.",
+                     ex.GetBaseException().Message);
 
                 return new BadRequestObjectResult(new
                 {
@@ -119,14 +128,13 @@ namespace Cloud5mins.Function
             }
         }
 
-        public IActionResult ValidateRequest(
-            ExecutionContext context, HttpRequestMessage req, ClaimsPrincipal principal, ILogger log)
+        public override IActionResult ValidateAuth(ClaimsPrincipal principal, ILogger log)
         {
             IActionResult invalidRequest;
 
-            if (this._urlShortenerConfiguration.EnableApiAccess && Utility.IsAppOnlyToken(principal, log))
+            if (this._configuration.EnableApiAccess && Utility.IsAppOnlyToken(principal, log))
             {
-                invalidRequest = Utility.CheckAuthRole(principal, log, this._urlShortenerConfiguration.UrlShortenApiRoleName);
+                invalidRequest = Utility.CheckAuthRole(principal, log, this._configuration.UrlShortenApiRoleName);
             }
             else
             {
@@ -136,27 +144,6 @@ namespace Cloud5mins.Function
             if (invalidRequest != null)
             {
                 return invalidRequest;
-            }
-            else
-            {
-                if (principal.FindFirst(ClaimTypes.GivenName) != null)
-                {
-                    string userId = principal.FindFirst(ClaimTypes.GivenName).Value;
-                    log.LogInformation("Authenticated user {user}.", userId);
-
-
-                }
-                else if (principal.FindFirst(ClaimTypes.Role) != null)
-                {
-                    log.LogInformation("Authenticated role.");
-                }
-            }
-
-            LogAuthenticatedUser(principal, context, log);
-
-            if (req == null)
-            {
-                return new NotFoundResult();
             }
 
             return null;

@@ -54,33 +54,28 @@ namespace Cloud5mins.Function
         public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
         ILogger log,
-        ExecutionContext context,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            string userId = string.Empty;
+            var authResult = ValidateAuth(principal, log);
+
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
+            var clickStatsRequest = await ParseRequestAsync<UrlClickStatsRequest>(req);
+
+            if (clickStatsRequest is null)
+            {
+                return new BadRequestResult();
+            }
 
             var result = new ClickDateList();
 
-            var (requestValid, invalidResult, clickStatsRequest) = await ValidateRequestAsync<UrlClickStatsRequest>(context, req, principal, log);
-
-
-            // Validation of the inputs
-            if (req == null)
-            {
-                return new BadRequestObjectResult(new { StatusCode = HttpStatusCode.NotFound });
-            }
-
             try
             {
-
-                // string searchingKey = "";
-                // log.LogInformation($"Fetching for {clickStatsRequest.Vanity}.");
-                // if(!string.IsNullOrEmpty(clickStatsRequest.Vanity)){
-                //     searchingKey = clickStatsRequest.Vanity;
-                // }
-                // log.LogInformation($"Now Looking for {searchingKey}.");
 
                 var rawStats = await this._storageTableHelper.GetAllStatsByVanity(clickStatsRequest.Vanity);
                 

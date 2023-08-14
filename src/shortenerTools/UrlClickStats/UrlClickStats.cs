@@ -25,17 +25,22 @@ namespace Cloud5mins.Function
         public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
         ILogger log,
-        ExecutionContext context,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            var (requestValid, invalidResult, clickStatsRequest) = await ValidateRequestAsync<UrlClickStatsRequest>(context, req, principal, log);
+            var authResult = ValidateAuth(principal, log);
 
-            // Validation of the inputs
-            if (!requestValid)
+            if (authResult is not null)
             {
-                return invalidResult;
+                return authResult;
+            }
+
+            var clickStatsRequest = await ParseRequestAsync<UrlClickStatsRequest>(req);
+
+            if (clickStatsRequest is null)
+            {
+                return new BadRequestResult();
             }
 
             try
@@ -49,8 +54,8 @@ namespace Cloud5mins.Function
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "{functionName} failed due to an unexpected error: {errorMessage}.",
-                    context.FunctionName, ex.GetBaseException().Message);
+                log.LogError(ex, "Failed due to an unexpected error: {errorMessage}.",
+                    ex.GetBaseException().Message);
 
                 return new BadRequestObjectResult(new
                 {

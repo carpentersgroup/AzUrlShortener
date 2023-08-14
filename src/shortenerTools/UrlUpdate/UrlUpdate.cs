@@ -59,17 +59,23 @@ namespace Cloud5mins.Function
         public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
         ILogger log,
-        ExecutionContext context,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
             // Validation of the inputs
-            var (requestValid, invalidResult, shortUrlEntity) = await ValidateRequestAsync<ShortUrlEntity>(context, req, principal, log);
+            var authResult = ValidateAuth(principal, log);
 
-            if (!requestValid)
+            if(authResult is not null)
             {
-                return invalidResult;
+                return authResult;
+            }
+
+            var shortUrlEntity = await ParseRequestAsync<ShortUrlEntity>(req);
+
+            if (shortUrlEntity is null)
+            {
+                return new BadRequestResult();
             }
 
             // If the Url parameter only contains whitespaces or is empty return with BadRequest.
@@ -100,8 +106,8 @@ namespace Cloud5mins.Function
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "{functionName} failed due to an unexpected error: {errorMessage}.",
-                    context.FunctionName, ex.GetBaseException().Message);
+                log.LogError(ex, "Failed due to an unexpected error: {errorMessage}.",
+                    ex.GetBaseException().Message);
 
                 return new BadRequestObjectResult(new
                 {

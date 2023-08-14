@@ -47,14 +47,14 @@ namespace Cloud5mins.Function
         public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequestMessage req,
         ILogger log,
-        ExecutionContext context,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            var invalidResult = ValidateRequest(context, req, principal, log);
+            // Validation of the inputs
+            var invalidResult = this.ValidateAuth(principal, log);
 
-            if (invalidResult is not null)
+            if (invalidResult != null)
             {
                 return invalidResult;
             }
@@ -63,8 +63,7 @@ namespace Cloud5mins.Function
 
             try
             {
-                result.UrlList = await _storageTableHelper.GetAllShortUrlEntities();
-                result.UrlList = result.UrlList.Where(p => !(p.IsArchived ?? false)).ToList();
+                result.UrlList = await _storageTableHelper.GetAllShortUrlEntities(includeArchived: false);
 
                 var host = this._configuration.UseCustomDomain ? this._configuration.CustomDomain : req.RequestUri.GetLeftPart(UriPartial.Authority);
                 foreach (var shortUrl in result.UrlList)
@@ -76,8 +75,8 @@ namespace Cloud5mins.Function
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "{functionName} failed due to an unexpected error: {errorMessage}.",
-                    context.FunctionName, ex.GetBaseException().Message);
+                log.LogError(ex, "Failed due to an unexpected error: {errorMessage}.",
+                    ex.GetBaseException().Message);
 
                 return new BadRequestObjectResult(new
                 {
@@ -85,19 +84,6 @@ namespace Cloud5mins.Function
                     StatusCode = HttpStatusCode.BadRequest
                 });
             }
-        }
-
-        public IActionResult ValidateRequest(ExecutionContext context, HttpRequestMessage req, ClaimsPrincipal principal, ILogger log)
-        {
-            var invalidRequest = Utility.CheckUserImpersonatedAuth(principal, log);
-            if (invalidRequest != null)
-            {
-                return invalidRequest;
-            }
-
-            LogAuthenticatedUser(principal, context, log);
-
-            return null;
         }
     }
 }

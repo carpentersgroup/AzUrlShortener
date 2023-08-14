@@ -77,11 +77,16 @@ namespace Cloud5mins.domain
             return eShortUrl;
         }
 
-        public async Task<List<ShortUrlEntity>> GetAllShortUrlEntities()
+        public async Task<List<ShortUrlEntity>> GetAllShortUrlEntities(bool includeArchived)
         {
             var tblUrls = GetUrlsTable();
 
             string filter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.NotEqual, "KEY");
+
+            if(!includeArchived)
+            {
+                filter = TableQuery.CombineFilters(filter, TableOperators.And, TableQuery.GenerateFilterConditionForBool("Archived", QueryComparisons.NotEqual, true));
+            }
 
             // Retrieving all entities that are NOT the NextId entity 
             // (it's the only one in the partition "KEY")
@@ -121,22 +126,23 @@ namespace Cloud5mins.domain
             var tblUrls = GetStatsTable();
             TableContinuationToken token = null;
             var lstShortUrl = new List<ClickStatsEntity>();
+            TableQuery<ClickStatsEntity> rangeQuery = new TableQuery<ClickStatsEntity>();
+
+            if (!string.IsNullOrEmpty(vanity))
+            {
+                rangeQuery = rangeQuery.Where(
+                filter: TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, vanity));
+            }
+
             do
             {
-                TableQuery<ClickStatsEntity> rangeQuery;
-
-                if(string.IsNullOrEmpty(vanity)){
-                    rangeQuery = new TableQuery<ClickStatsEntity>();
-                }
-                else{
-                    rangeQuery = new TableQuery<ClickStatsEntity>().Where(
-                    filter: TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, vanity));
-                }
-
                 var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(rangeQuery, token).ConfigureAwait(false);
+
                 lstShortUrl.AddRange(queryResult.Results);
+
                 token = queryResult.ContinuationToken;
             } while (token != null);
+
             return lstShortUrl;
         }
 
@@ -145,17 +151,22 @@ namespace Cloud5mins.domain
         /// </summary>
         /// <param name="vanity"></param>
         /// <returns>ShortUrlEntity</returns>
-        public async Task<ShortUrlEntity> GetShortUrlEntityByVanity(string vanity)
+        public async Task<ShortUrlEntity> GetShortUrlEntityByVanity(string vanity, string partitionKey = null)
         {
             var tblUrls = GetUrlsTable();
+            string filter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, vanity);
+            if(partitionKey is not null)
+            {
+                filter = TableQuery.CombineFilters(filter, TableOperators.And, TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey));
+            }
             TableQuery<ShortUrlEntity> query = new TableQuery<ShortUrlEntity>().Where(
-                            filter: TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, vanity));
+                            filter: filter);
             return await SegmentedQuerySingleAsync(tblUrls, query).ConfigureAwait(false);
         }
 
-        public async Task<bool> IfShortUrlEntityExistByVanity(string vanity)
+        public async Task<bool> IfShortUrlEntityExistByVanity(string vanity, string partitionKey = null)
         {
-            ShortUrlEntity shortUrlEntity = await GetShortUrlEntityByVanity(vanity).ConfigureAwait(false);
+            ShortUrlEntity shortUrlEntity = await GetShortUrlEntityByVanity(vanity, partitionKey).ConfigureAwait(false);
             return shortUrlEntity != null;
         }
 
@@ -171,6 +182,41 @@ namespace Cloud5mins.domain
             originalUrl.IsArchived = true;
 
             return await SaveShortUrlEntity(originalUrl).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Saves a batch of ShortUrlEntity to table storage across multiple partitions
+        /// </summary>
+        /// <param name="newShortUrls"></param>
+        /// <returns></returns>
+        public async Task SaveShortUrlEntitiesCrossPartitionAsync(IEnumerable<ShortUrlEntity> newShortUrls)
+        {
+            var partitionGroups = newShortUrls.GroupBy(x => x.PartitionKey);
+
+            foreach (var partitionGroup in partitionGroups)
+            {
+                foreach(var row in partitionGroup)
+                {
+                    await SaveShortUrlEntitiesAsync(newShortUrls).ConfigureAwait(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Saves a batch of ShortUrlEntity to table storage
+        /// 
+        /// All entities must have the same partition key
+        /// </summary>
+        /// <param name="newShortUrls"></param>
+        /// <returns></returns>
+        public async Task SaveShortUrlEntitiesAsync(IEnumerable<ShortUrlEntity> newShortUrls)
+        {
+            TableBatchOperation tableOperations = new TableBatchOperation();
+            foreach (var shortUrl in newShortUrls)
+            {
+                tableOperations.InsertOrMerge(shortUrl);
+            }
+            _ = await GetUrlsTable().ExecuteBatchAsync(tableOperations).ConfigureAwait(false);
         }
 
         public async Task<ShortUrlEntity> SaveShortUrlEntity(ShortUrlEntity newShortUrl)
