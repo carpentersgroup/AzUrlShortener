@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace shortenerTools.Exceptions
+namespace ShortenerTools.Exceptions
 {
     [Serializable]
     public class HttpClientException : Exception

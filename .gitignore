@@ -274,3 +274,4 @@ src/adminTools/adminBlazorWebsite/src/appsettings.Development.json
 /src/adminTools/adminBlazorWebsite/src/app.db-shm
 /src/adminTools/adminBlazorWebsite/src/app.db-wal
 /src/shortenerTools/local.settings.json
+/src/shortenerTools/transformed

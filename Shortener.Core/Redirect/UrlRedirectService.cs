@@ -5,6 +5,7 @@ using Shortener.Azure.Entities;
 using Shortener.Core.Configuration;
 using Shortener.Azure.Extensions;
 using System.Net;
+using Shortener.Core.Shorten.Algorithms;
 
 namespace Shortener.Core.Redirect
 {
@@ -44,11 +45,10 @@ namespace Shortener.Core.Redirect
 
             string hostPartitionKey = host.SanitiseForTableKey();
             newUrl = await _storageTableHelper.GetShortUrlEntityByVanityAsync(shortUrl, hostPartitionKey).ConfigureAwait(false);
-            //TODO: Remove this once all links have been migrated to the new format
+
             if (newUrl is null)
             {
-                var tempUrl = new ShortUrlEntity(shortUrl.First().ToString(), string.Empty, shortUrl);
-                newUrl = await _storageTableHelper.GetShortUrlEntityAsync(tempUrl).ConfigureAwait(false);
+                newUrl = await FallbackToPreMigrationFetch(shortUrl, newUrl).ConfigureAwait(false);
             }
 
             if (newUrl is not null)
@@ -83,6 +83,19 @@ namespace Shortener.Core.Redirect
                     Status = RedirectStatus.NotFound
                 };
             }
+        }
+
+        [Obsolete("Remove this once all links have been migrated to the new format")]
+        private async Task<ShortUrlEntity?> FallbackToPreMigrationFetch(string shortUrl, ShortUrlEntity? newUrl)
+        {
+            var tempUrl = new ShortUrlEntity(shortUrl.First().ToString(), string.Empty, shortUrl);
+            var tempNewUrl = await _storageTableHelper.GetShortUrlEntityAsync(tempUrl).ConfigureAwait(false);
+            if (tempNewUrl is not null && tempNewUrl.Algorithm == (int)ShortenerAlgorithm.None)
+            {
+                newUrl = tempNewUrl;
+            }
+
+            return newUrl;
         }
 
         private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl, IPAddress? ip)

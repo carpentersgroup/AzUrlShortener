@@ -1,0 +1,20 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "UlsDataStorage": "UseDevelopmentStorage=true",
+    "UrlShortener:DefaultRedirectUrl": "https://google.com",
+    "UrlShortener:CustomDomain": "https://c5m.ca",
+    "UrlShortener:EnableApiAccess": true,
+    "UrlShortener:RecordCountryStats": true,
+    "IpLocationService:Url": "https://api.ipbase.com/v1",
+    "UrlShortener:DefaultAlgorithm": "RandomExtendableLength",
+    "UrlShortener:AlphabetProvider": "NoProfanity",
+    "JwtSettings:AllowedTenants:0": "00000000-1111-2222-3333-444444444444",
+    "JwtSettings:AllowedClients:0": "11111111-2222-3333-4444-555555555555",
+    "JwtSettings:AllowedClients:1": "22222222-3333-4444-5555-666666666666",
+    "JwtSettings:MetadataAddress": "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
+    "JwtSettings:RequiredRoles:0": "admin"
+  }
+}

@@ -16,43 +16,41 @@ Output:
 */
 
 using Cloud5mins.domain;
+using Fizzibly.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using shortenerTools.Abstractions;
+using Shortener.Azure;
+using Shortener.Core.Configuration;
+using ShortenerTools.Abstractions;
 using System;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace Cloud5mins.Function
+namespace ShortenerTools.Functions
 {
     public class UrlList : FunctionBase
     {
         private readonly IStorageTableHelper _storageTableHelper;
 
-        private readonly UrlShortenerConfiguration _configuration;
-
-        public UrlList(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration)
+        public UrlList(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration, HandlerContainer authHandlerContainer) : base(configuration, authHandlerContainer)
         {
             _storageTableHelper = storageTableHelper;
-            this._configuration = configuration.Value;
         }
 
         [FunctionName("UrlList")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequestMessage req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] Microsoft.AspNetCore.Http.HttpRequest req,
         ILogger log,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            // Validation of the inputs
-            var invalidResult = this.ValidateAuth(principal, log);
+            var invalidResult = await HandleAuth(principal, req).ConfigureAwait(false);
 
             if (invalidResult != null)
             {
@@ -63,10 +61,19 @@ namespace Cloud5mins.Function
 
             try
             {
-                result.UrlList = await _storageTableHelper.GetAllShortUrlEntities(includeArchived: false);
+                result.UrlList = await _storageTableHelper.GetAllShortUrlEntitiesAsync(includeArchived: false).ConfigureAwait(false);
 
-                var host = this._configuration.UseCustomDomain ? this._configuration.CustomDomain : req.RequestUri.GetLeftPart(UriPartial.Authority);
-                foreach (var shortUrl in result.UrlList)
+                string host;
+                if (_configuration.UseCustomDomain)
+                {
+                    host = GetBaseUrlFromUri(_configuration.CustomDomain);
+                }
+                else
+                {
+                    host = GetUrlFromRequest(req);
+                }
+
+                foreach (var shortUrl in result.UrlList.Where(u => string.IsNullOrWhiteSpace(u.ShortUrl)))
                 {
                     shortUrl.ShortUrl = Utility.GetShortUrl(host, shortUrl.RowKey);
                 }

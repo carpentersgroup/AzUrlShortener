@@ -1,53 +1,50 @@
 using Cloud5mins.domain;
+using Fizzibly.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using shortenerTools.Abstractions;
+using Microsoft.Extensions.Options;
+using Shortener.Azure;
+using Shortener.Azure.Entities;
+using Shortener.Core.Configuration;
+using ShortenerTools.Abstractions;
 using System;
 using System.Net;
-using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace Cloud5mins.Function
+namespace ShortenerTools.Functions
 {
     public class UrlClickStats : FunctionBase
     {
         private readonly IStorageTableHelper _storageTableHelper;
 
-        public UrlClickStats(IStorageTableHelper storageTableHelper)
+        public UrlClickStats(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration, HandlerContainer authHandlerContainer) : base(configuration, authHandlerContainer)
         {
             _storageTableHelper = storageTableHelper;
         }
 
         [FunctionName("UrlClickStats")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] UrlClickStatsRequest clickStatsRequest, Microsoft.AspNetCore.Http.HttpRequest req,
         ILogger log,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            var authResult = ValidateAuth(principal, log);
+            var invalidResult = await HandleAuth(principal, req).ConfigureAwait(false);
 
-            if (authResult is not null)
+            if (invalidResult != null)
             {
-                return authResult;
-            }
-
-            var clickStatsRequest = await ParseRequestAsync<UrlClickStatsRequest>(req);
-
-            if (clickStatsRequest is null)
-            {
-                return new BadRequestResult();
+                return invalidResult;
             }
 
             try
             {
                 var result = new ClickStatsEntityList
                 {
-                    ClickStatsList = await _storageTableHelper.GetAllStatsByVanity(clickStatsRequest.Vanity)
+                    ClickStatsList = await _storageTableHelper.GetAllStatsByVanityAsync(clickStatsRequest.Vanity).ConfigureAwait(false)
                 };
 
                 return new OkObjectResult(result);

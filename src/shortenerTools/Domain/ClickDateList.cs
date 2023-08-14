@@ -4,7 +4,7 @@ namespace Cloud5mins.domain
 {
     public class ClickDateList
     {
-        public List<ClickDate> Items { get; set; }
+        public IEnumerable<ClickDate> Items { get; set; }
         public string Url { get; set; }
         public ClickDateList(){
             Url     = string.Empty;

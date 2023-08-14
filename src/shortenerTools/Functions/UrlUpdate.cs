@@ -29,53 +29,47 @@ Output:
 */
 
 using Cloud5mins.domain;
+using Fizzibly.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using shortenerTools.Abstractions;
+using Shortener.Azure;
+using Shortener.Azure.Entities;
+using Shortener.Core.Configuration;
+using ShortenerTools.Abstractions;
 using System;
 using System.Net;
-using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Web.Http;
 
-namespace Cloud5mins.Function
+namespace ShortenerTools.Functions
 {
     public class UrlUpdate : FunctionBase
     {
         private readonly IStorageTableHelper _storageTableHelper;
 
-        private readonly UrlShortenerConfiguration _configuration;
-
-        public UrlUpdate(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration)
+        public UrlUpdate(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration, HandlerContainer authHandlerContainer) : base(configuration, authHandlerContainer)
         {
             _storageTableHelper = storageTableHelper;
-            this._configuration = configuration.Value;
         }
 
+        //TODO: Convert Entity to DTO
         [FunctionName("UrlUpdate")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestMessage req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] ShortUrlEntity shortUrlEntity, Microsoft.AspNetCore.Http.HttpRequest req,
         ILogger log,
         ClaimsPrincipal principal)
         {
             log.LogInformation($"C# HTTP trigger function processed this request: {req}");
 
-            // Validation of the inputs
-            var authResult = ValidateAuth(principal, log);
+            var invalidResult = await HandleAuth(principal, req).ConfigureAwait(false);
 
-            if(authResult is not null)
+            if (invalidResult != null)
             {
-                return authResult;
-            }
-
-            var shortUrlEntity = await ParseRequestAsync<ShortUrlEntity>(req);
-
-            if (shortUrlEntity is null)
-            {
-                return new BadRequestResult();
+                return invalidResult;
             }
 
             // If the Url parameter only contains whitespaces or is empty return with BadRequest.
@@ -87,20 +81,26 @@ namespace Cloud5mins.Function
             // Validates if input.url is a valid absolute url, aka is a complete reference to the resource, ex: http(s)://google.com
             if (!Uri.IsWellFormedUriString(shortUrlEntity.Url, UriKind.Absolute))
             {
-                return new BadRequestObjectResult($"{shortUrlEntity.Url} is not a valid absolute Url. The Url parameter must start with 'http://' or 'http://'.");
+                return new BadRequestObjectResult($"{shortUrlEntity.Url} is not a valid absolute Url. The Url parameter must start with 'http://' or 'https://'.");
             }
 
             try
             {
-                var result = await _storageTableHelper.SaveShortUrlEntity(shortUrlEntity);
-                
-                string customDomain = this._configuration.CustomDomain;
+                string baseUrl = _configuration.UseCustomDomain ? GetBaseUrlFromUri(_configuration.CustomDomain) : GetUrlFromRequest(req);
 
-                var host = string.IsNullOrEmpty(customDomain) ? req.RequestUri.GetLeftPart(UriPartial.Authority) : customDomain;
+                log.LogInformation("-> host = {baseUrl}", baseUrl);
 
-                log.LogInformation($"-> host = {host}");
+                if (string.IsNullOrWhiteSpace(shortUrlEntity.ShortUrl))
+                {
+                    shortUrlEntity.ShortUrl = Utility.GetShortUrl(baseUrl, shortUrlEntity.RowKey);
+                }
 
-                result.ShortUrl = Utility.GetShortUrl(host, result.RowKey);
+                ShortUrlEntity? result = await _storageTableHelper.SaveShortUrlEntityAsync(shortUrlEntity).ConfigureAwait(false);
+
+                if(result is null)
+                {
+                    return new InternalServerErrorResult();
+                }
 
                 return new OkObjectResult(result);
             }

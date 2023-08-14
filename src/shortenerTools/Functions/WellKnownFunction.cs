@@ -1,17 +1,16 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.StaticFiles;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using shortenerTools.Abstractions;
+using Shortener.Azure;
 using System.Threading.Tasks;
 
-namespace shortenerTools.WellKnown
+namespace ShortenerTools.Functions
 {
     internal class WellKnownFunction
     {
         private readonly IStorageTableHelper _storageTableHelper;
+        private static FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new FileExtensionContentTypeProvider();
 
         public WellKnownFunction(IStorageTableHelper storageTableHelper)
         {
@@ -20,19 +19,17 @@ namespace shortenerTools.WellKnown
 
         [FunctionName("WellKnown")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "WellKnown/{filename}")] HttpRequest req, string filename,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "WellKnown/{filename}")] Microsoft.AspNetCore.Http.HttpRequest req, string filename,
         ILogger log)
         {
             if (!string.IsNullOrWhiteSpace(filename))
             {
-                var content = await _storageTableHelper.GetWellKnownContent(filename);
+                var content = await _storageTableHelper.GetWellKnownContentAsync(filename).ConfigureAwait(false);
 
-                string contentType;
-                new FileExtensionContentTypeProvider().TryGetContentType(filename, out contentType);
+                fileExtensionContentTypeProvider.TryGetContentType(filename, out string? contentType);
                 contentType = contentType ?? "application/octet-stream";
 
                 return new FileContentResult(System.Text.Encoding.UTF8.GetBytes(content), contentType);
-                //return new OkObjectResult(content);
             }
             else
             {
@@ -40,4 +37,5 @@ namespace shortenerTools.WellKnown
             }
         }
     }
+
 }

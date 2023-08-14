@@ -1,3 +1,4 @@
+using Shortener.Azure.Entities;
 using System.Collections.Generic;
 
 namespace Cloud5mins.domain
