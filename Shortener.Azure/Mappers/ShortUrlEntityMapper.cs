@@ -57,14 +57,12 @@ namespace Shortener.Azure.Mappers
                 schedules = System.Text.Json.JsonSerializer.Deserialize<Schedule[]>(entity.SchedulesPropertyRaw);
             }
 
-            return new ShortUrlPoco(entity.Title, entity.Url, entity.RowKey)
+            return new ShortUrlPoco(entity.PartitionKey, entity.Url, entity.RowKey, entity.Title, schedules)
             {
-                Authority = entity.PartitionKey,
                 ClicksByCountry = clicksByCountry,
                 ShortUrl = entity.ShortUrl,
                 Clicks = entity.Clicks,
                 IsArchived = entity.IsArchived,
-                Schedules = schedules,
                 Version = entity.Version,
                 Algorithm = entity.Algorithm
             };
