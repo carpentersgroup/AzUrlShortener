@@ -1,9 +1,7 @@
-﻿using Azure;
-using Azure.Data.Tables;
+﻿using Azure.Data.Tables;
 using Microsoft.Extensions.Logging;
 using Shortener.AzureServices.Entities;
 using Shortener.AzureServices.Extensions;
-using System.Collections.Generic;
 
 namespace Shortener.AzureServices
 {

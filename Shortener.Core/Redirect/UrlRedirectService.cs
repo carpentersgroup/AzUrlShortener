@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shortener.AzureServices;
-using Shortener.AzureServices.Entities;
 using Shortener.Core.Configuration;
 using Shortener.AzureServices.Extensions;
 using System.Net;

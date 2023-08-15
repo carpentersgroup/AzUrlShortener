@@ -1,5 +1,4 @@
 using Shortener.Azure.Pocos;
-using Shortener.AzureServices.Entities;
 
 namespace Shortener.Core
 {
