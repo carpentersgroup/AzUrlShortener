@@ -2,20 +2,23 @@
 
 namespace Shortener.Azure.Pocos
 {
-    public class ClickStatsPoco : AbstractTableEntity
+    public class ClickStatsPoco
     {
         public string? Datetime { get; set; }
 
         public string Vanity { get; private set; }
 
+        [Obsolete("For backward compatibility only. Use Vanity instead.")]
+        public string PartitionKey => Vanity;
+
         public string? Domain { get; set; }
 
-        public ClickStatsPoco() : base("", Guid.NewGuid().ToString())
+        public ClickStatsPoco()
         {
             Vanity = "";
         }
 
-        public ClickStatsPoco(string vanity, string domain) : base(vanity, Guid.NewGuid().ToString())
+        public ClickStatsPoco(string vanity, string domain)
         {
             Vanity = vanity;
             Domain = domain;
