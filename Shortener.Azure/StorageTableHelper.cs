@@ -7,7 +7,6 @@ using Shortener.AzureServices.Extensions;
 
 namespace Shortener.AzureServices
 {
-
     public class StorageTableHelper : IStorageTableHelper
     {
         private const string NEXT_ID_PARTITION_KEY = "KEY";
@@ -185,10 +184,8 @@ namespace Shortener.AzureServices
                     string filter = TableClient.CreateQueryFilter<ShortUrlEntity>(s => s.RowKey == vanity);
                     var results = tblUrls.QueryAsync<ShortUrlEntity>(filter, 1);
 
-                    await foreach (var item in results.AsPages().ConfigureAwait(false))
-                    {
-                        return item.Values.FirstOrDefault()?.FromEntity();
-                    }
+                    var firstPage = await results.AsPages().FirstOrDefaultAsync().ConfigureAwait(false);
+                    return firstPage?.Values.FirstOrDefault()?.FromEntity();
                 }
             }
             catch (Exception ex)
@@ -196,8 +193,6 @@ namespace Shortener.AzureServices
                 this._logger.LogError(ex, "Error getting all short url entities");
                 return null;
             }
-
-            return null;
         }
 
         public async Task<bool> IfShortUrlEntityExistByVanityAsync(string vanity, string? partitionKey = null)
