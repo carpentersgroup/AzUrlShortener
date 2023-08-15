@@ -81,7 +81,6 @@ namespace Shortener.Core.Shorten
             }
 
             ShortUrlPoco newRow = new ShortUrlPoco(shortRequest.Host.Authority.SanitiseForTableKey(), shortRequest.Url.ToString(), shortRequest.Vanity, title, shortRequest.Schedules);
-            newRow.Version = 1;
             newRow.Algorithm = (int)algorithm;
 
             string hostUrl = shortRequest.Host.ToString();

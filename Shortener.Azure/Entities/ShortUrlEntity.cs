@@ -16,7 +16,7 @@ namespace Shortener.AzureServices.Entities
 
         public string? SchedulesPropertyRaw { get; set; }
 
-        public int Version { get; set; } = 0;
+        public int Version { get; set; } = 1;
 
         public int Algorithm { get; set; }
 
