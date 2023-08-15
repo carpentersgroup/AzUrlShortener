@@ -51,26 +51,9 @@ namespace Shortener.Core.Redirect
             }
         }
 
-        public static string? GetHeaderValue(Microsoft.Azure.Functions.Worker.Http.HttpRequestData req, string headerName)
-        {
-            return req.Headers.FirstOrDefault(x => x.Key == headerName).Value.FirstOrDefault();
-        }
-
-        public static string? GetHeaderValue(Microsoft.AspNetCore.Http.HttpRequest req, string headerName)
-        {
-            if (!req.Headers.TryGetValue(headerName, out var header))
-            {
-                return null;
-            }
-
-            var data = header[0];
-
-            return data;
-        }
-
         public IPAddress GetClientIpn(Microsoft.AspNetCore.Http.HttpRequest request)
         {
-            string? firstForwardedForHeader = GetHeaderValue(request, "X-Forwarded-For");
+            string? firstForwardedForHeader = HttpHeaderExtensions.GetFirstHeaderValue(request, "X-Forwarded-For");
 
             if (string.IsNullOrEmpty(firstForwardedForHeader))
             {
@@ -95,7 +78,7 @@ namespace Shortener.Core.Redirect
 
         public IPAddress? GetClientIpn(Microsoft.Azure.Functions.Worker.Http.HttpRequestData request)
         {
-            string? firstForwardedForHeader = GetHeaderValue(request, "X-Forwarded-For");
+            string? firstForwardedForHeader = HttpHeaderExtensions.GetFirstHeaderValue(request, "X-Forwarded-For");
 
             if (string.IsNullOrEmpty(firstForwardedForHeader))
             {
@@ -114,7 +97,7 @@ namespace Shortener.Core.Redirect
 
             static IPAddress? GetRemoteAddress(Microsoft.Azure.Functions.Worker.Http.HttpRequestData request)
             {
-                return GetClientIpn(GetHeaderValue(request, "x-azure-clientip"));
+                return GetClientIpn(HttpHeaderExtensions.GetFirstHeaderValue(request, "x-azure-clientip"));
             }
         }
 
