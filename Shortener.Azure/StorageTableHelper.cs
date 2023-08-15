@@ -78,7 +78,7 @@ namespace Shortener.AzureServices
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Error getting well known content");
+                this._logger.LogError(ex, "Error getting short url for {Vanity} from authority: {Authority}", row.Vanity, row.Authority);
                 return null;
             }
         }
@@ -190,7 +190,7 @@ namespace Shortener.AzureServices
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Error getting all short url entities");
+                this._logger.LogError(ex, "Error getting short url by vanity");
                 return null;
             }
         }
@@ -298,7 +298,7 @@ namespace Shortener.AzureServices
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Error getting all short url entities");
+                this._logger.LogError(ex, "Error getting next id for authority {authority}", authority);
                 return 0;
             }
         }
