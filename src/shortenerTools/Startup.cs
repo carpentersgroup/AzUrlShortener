@@ -1,10 +1,9 @@
-﻿using Fizzibly.Auth;
-using Microsoft.Azure.Cosmos.Table;
+﻿using Azure.Data.Tables;
+using Fizzibly.Auth;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Shortener.Azure;
+using Shortener.AzureServices;
 using Shortener.Core.Configuration;
 using Shortener.Core.Redirect;
 using Shortener.Core.Shorten;
@@ -42,15 +41,14 @@ namespace ShortenerTools
                 client.BaseAddress = new Uri(configuration.GetSection("IpLocationService:Url").Value);
             });
 
-            services.AddSingleton<IStorageTableHelper, StorageTableHelper>(provider =>
+            services.AddSingleton<TableServiceClient>(s =>
             {
-                var storageAccount = CloudStorageAccount.Parse(configuration.GetSection("UlsDataStorage").Value);
-                var tableClient = storageAccount.CreateCloudTableClient();
-                var logger = provider.GetRequiredService<ILogger<StorageTableHelper>>();
-
-                var storageHelper = new StorageTableHelper(tableClient, logger);
-                return storageHelper;
+                TableServiceClient serviceClient = new TableServiceClient(configuration.GetSection("UlsDataStorage").Value);
+                return serviceClient;
             });
+
+            services.AddSingleton<IStorageTableHelper, StorageTableHelper>();
+            services.AddSingleton<IMigrationTableHelper, MigrationTableHelper>();
 
             services.AddUrlGeneration();
         }

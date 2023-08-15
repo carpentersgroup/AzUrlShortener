@@ -35,8 +35,9 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
-using Shortener.Azure.Entities;
+using Shortener.Azure.Pocos;
+using Shortener.AzureServices;
+using Shortener.AzureServices.Entities;
 using Shortener.Core.Configuration;
 using ShortenerTools.Abstractions;
 using System;
@@ -59,7 +60,7 @@ namespace ShortenerTools.Functions
         //TODO: Convert Entity to DTO
         [FunctionName("UrlUpdate")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] ShortUrlEntity shortUrlEntity, Microsoft.AspNetCore.Http.HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] ShortUrlPoco shortUrlEntity, Microsoft.AspNetCore.Http.HttpRequest req,
         ILogger log,
         ClaimsPrincipal principal)
         {
@@ -92,10 +93,10 @@ namespace ShortenerTools.Functions
 
                 if (string.IsNullOrWhiteSpace(shortUrlEntity.ShortUrl))
                 {
-                    shortUrlEntity.ShortUrl = Utility.GetShortUrl(baseUrl, shortUrlEntity.RowKey);
+                    shortUrlEntity.ShortUrl = Utility.GetShortUrl(baseUrl, shortUrlEntity.Vanity);
                 }
 
-                ShortUrlEntity? result = await _storageTableHelper.SaveShortUrlEntityAsync(shortUrlEntity).ConfigureAwait(false);
+                ShortUrlPoco? result = await _storageTableHelper.SaveShortUrlEntityAsync(shortUrlEntity).ConfigureAwait(false);
 
                 if(result is null)
                 {

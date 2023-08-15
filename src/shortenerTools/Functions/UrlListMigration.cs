@@ -5,8 +5,8 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
-using Shortener.Azure.Extensions;
+using Shortener.AzureServices;
+using Shortener.AzureServices.Extensions;
 using Shortener.Core.Configuration;
 using Shortener.Core.Shorten.Algorithms;
 using ShortenerTools.Abstractions;
@@ -19,9 +19,9 @@ namespace ShortenerTools.Functions
 {
     public class UrlListMigration : FunctionBase
     {
-        private readonly IStorageTableHelper _storageTableHelper;
+        private readonly IMigrationTableHelper _storageTableHelper;
 
-        public UrlListMigration(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration, HandlerContainer authHandlerContainer) : base(configuration, authHandlerContainer)
+        public UrlListMigration(IMigrationTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration, HandlerContainer authHandlerContainer) : base(configuration, authHandlerContainer)
         {
             _storageTableHelper = storageTableHelper;
         }
@@ -40,7 +40,7 @@ namespace ShortenerTools.Functions
                 string authority = _configuration.UseCustomDomain ? _configuration.CustomDomain.Authority : GetAuthorityFromRequest(req);
 
                 await _storageTableHelper.MigrateNextTableIdForAuthorityAsync(authority).ConfigureAwait(false);
-                var shortUrls = await _storageTableHelper.GetAllShortUrlEntitiesAsync(includeArchived: true).ConfigureAwait(false);
+                var shortUrls = await _storageTableHelper.GetAllShortUrlEntitiesAsync().ConfigureAwait(false);
                 sw.Reset();
                 log.LogInformation($"Retrieved {shortUrls.Count} short urls in {sw.ElapsedMilliseconds} ms.");
                 long totalMilliseconds = sw.ElapsedMilliseconds;

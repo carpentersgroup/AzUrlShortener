@@ -1,20 +1,28 @@
-using Microsoft.Azure.Cosmos.Table;
+using Azure.Data.Tables;
 using Microsoft.Extensions.Logging;
-using Shortener.Azure.Entities;
-using Shortener.Azure.Extensions;
+using Shortener.Azure.Mappers;
+using Shortener.Azure.Pocos;
+using Shortener.AzureServices.Entities;
+using Shortener.AzureServices.Extensions;
 
-namespace Shortener.Azure
+namespace Shortener.AzureServices
 {
+
     public class StorageTableHelper : IStorageTableHelper
     {
         private const string NEXT_ID_PARTITION_KEY = "KEY";
+        private const string WELLKNOWN_PARITION_KEY = "WellKnown";
 
-        private readonly CloudTableClient _cloudTableClient;
+        private const string WELLKNOWN_TABLE_NAME = "WellKnown";
+        private const string CLICKSTATS_TABLE_NAME = "ClickStats";
+        private const string URLSDETAILS_TABLE_NAME = "UrlsDetails";
+
+        private readonly TableServiceClient _tableServiceClient;
         private readonly ILogger<StorageTableHelper> _logger;
 
-        public StorageTableHelper(CloudTableClient cloudTableClient, ILogger<StorageTableHelper> logger)
+        public StorageTableHelper(TableServiceClient cloudTableClient, ILogger<StorageTableHelper> logger)
         {
-            _cloudTableClient = cloudTableClient;
+            _tableServiceClient = cloudTableClient;
             _logger = logger;
             TryCreateTables();
         }
@@ -34,138 +42,126 @@ namespace Shortener.Azure
             }
         }
 
-        private CloudTable GetStatsTable()
+        private TableClient GetStatsTable() => GetTable(CLICKSTATS_TABLE_NAME);
+
+        private TableClient GetUrlsTable() => GetTable(URLSDETAILS_TABLE_NAME);
+
+        private TableClient GetWellKnownTable()
         {
-            const string TableName = "ClickStats";
-            var table = GetTable(TableName);
-            return table;
+            _ = _tableServiceClient.CreateTableIfNotExists(WELLKNOWN_TABLE_NAME);
+            return GetTable(WELLKNOWN_TABLE_NAME);
         }
 
-        private CloudTable GetUrlsTable()
-        {
-            const string TableName = "UrlsDetails";
-            var table = GetTable(TableName);
-            return table;
-        }
-
-        private CloudTable GetWellKnownTable()
-        {
-            const string TableName = "WellKnown";
-            CloudTable table = GetTable(TableName);
-            table.CreateIfNotExists();
-            return table;
-        }
-
-        private CloudTable GetTable(string tableName)
-        {
-            var table = _cloudTableClient.GetTableReference(tableName);
-            return table;
-        }
+        private TableClient GetTable(string tableName) => _tableServiceClient.GetTableClient(tableName);
 
         public async Task<string> GetWellKnownContentAsync(string filename)
         {
-            TableOperation selOperation = TableOperation.Retrieve<WellKnownEntity>("WellKnown", filename);
-            TableResult result = await GetWellKnownTable().ExecuteAsync(selOperation).ConfigureAwait(false);
-            WellKnownEntity? wellKnown = result.Result as WellKnownEntity;
+            WellKnownEntity? wellKnown;
+            try
+            {
+                wellKnown = await GetWellKnownTable().GetEntityAsync<WellKnownEntity>(WELLKNOWN_PARITION_KEY, filename).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error getting well known content");
+                return "";
+            }
+
             return wellKnown?.Content ?? "";
         }
 
-        public async Task<ShortUrlEntity?> GetShortUrlEntityAsync(ShortUrlEntity row)
+        public async Task<ShortUrlPoco?> GetShortUrlEntityAsync(ShortUrlPoco row)
         {
-            TableOperation selOperation = TableOperation.Retrieve<ShortUrlEntity>(row.PartitionKey, row.RowKey);
-            TableResult result = await GetUrlsTable().ExecuteAsync(selOperation).ConfigureAwait(false);
-            ShortUrlEntity? eShortUrl = result.Result as ShortUrlEntity;
-            return eShortUrl;
-        }
-
-        public async Task<List<ShortUrlEntity>> GetAllShortUrlEntitiesAsync(bool includeArchived)
-        {
-            var tblUrls = GetUrlsTable();
-
-            string filter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.NotEqual, "KEY");
-            filter = TableQuery.CombineFilters(filter, TableOperators.And, TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.NotEqual, "KEY"));
-
-            if (!includeArchived)
+            try
             {
-                filter = TableQuery.CombineFilters(filter, TableOperators.And, TableQuery.GenerateFilterConditionForBool("Archived", QueryComparisons.NotEqual, true));
+                var entity = await GetUrlsTable().GetEntityAsync<ShortUrlEntity>(row.Authority, row.Vanity).ConfigureAwait(false);
+                return entity.Value.FromEntity();
             }
-
-            // Retrieving all entities that are NOT the NextId entity 
-            // (it's the only one in the partition "KEY")
-            var rangeQuery = new TableQuery<ShortUrlEntity>().Where(filter);
-
-            var lstShortUrl = await SegmentedQueryAsync(tblUrls, rangeQuery).ConfigureAwait(false);
-
-            return lstShortUrl;
-        }
-
-        private static async Task<List<T>> SegmentedQueryAsync<T>(CloudTable table, TableQuery<T> query) where T : TableEntity, new()
-        {
-            List<T> results = new List<T>();
-
-            TableQuerySegment<T> result = await table.ExecuteQuerySegmentedAsync(query, null).ConfigureAwait(false);
-
-            results.AddRange(result);
-
-            while (result.ContinuationToken != null)
+            catch (Exception ex)
             {
-                result = await table.ExecuteQuerySegmentedAsync(query, result.ContinuationToken).ConfigureAwait(false);
-
-                results.AddRange(result);
+                this._logger.LogError(ex, "Error getting well known content");
+                return null;
             }
-
-            return results;
         }
 
-        private static async Task<T?> SegmentedQuerySingleAsync<T>(CloudTable table, TableQuery<T> query) where T : TableEntity, new()
+        public async Task<List<ShortUrlPoco>> GetAllShortUrlEntitiesAsync(bool includeArchived)
         {
-            var queryResult = await table.ExecuteQuerySegmentedAsync(query, null).ConfigureAwait(false);
-            return queryResult.Results.FirstOrDefault();
+            try
+            {
+                var tblUrls = GetUrlsTable();
+
+                string filter = "PartitionKey ne 'KEY' and RowKey ne 'KEY'";
+
+                if (!includeArchived)
+                {
+                    filter = TableClient.CreateQueryFilter<ShortUrlEntity>(s => s.PartitionKey != "KEY" && s.RowKey != "KEY" && s.IsArchived != true);
+                }
+
+                var results = tblUrls.QueryAsync<ShortUrlEntity>(filter);
+
+                List<ShortUrlEntity> entities = new List<ShortUrlEntity>();
+                await foreach (var result in results.ConfigureAwait(false))
+                {
+                    entities.Add(result);
+                }
+                return entities.FromEntity().ToList();
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error getting all short url entities");
+                return new List<ShortUrlPoco>();
+            }
         }
 
-        public async Task<List<ClickStatsEntity>> GetAllStatsByVanityAsync(string? vanity)
+        public async Task<List<ClickStatsPoco>> GetAllStatsByVanityAsync(string? vanity)
         {
             if(string.IsNullOrEmpty(vanity))
             {
                 return await GetAllStatsAsync().ConfigureAwait(false);
             }
 
-            var tblUrls = GetStatsTable();
-            TableContinuationToken? token = null;
-            var lstShortUrl = new List<ClickStatsEntity>();
-            
-            string filter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, vanity);
-            TableQuery<ClickStatsEntity> rangeQuery = new TableQuery<ClickStatsEntity>().Where(filter);
-
-            do
+            try
             {
-                var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(rangeQuery, token).ConfigureAwait(false);
+                var tblUrls = GetStatsTable();
 
-                lstShortUrl.AddRange(queryResult.Results);
+                string filter = TableClient.CreateQueryFilter<ClickStatsEntity>(s => s.PartitionKey == vanity);
 
-                token = queryResult.ContinuationToken;
-            } while (token != null);
+                var results = tblUrls.QueryAsync<ClickStatsEntity>(filter);
 
-            return lstShortUrl;
+                List<ClickStatsEntity> entities = new List<ClickStatsEntity>();
+                await foreach (var result in results.ConfigureAwait(false))
+                {
+                    entities.Add(result);
+                }
+                return entities.FromEntity().ToList();
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error getting all stats by vanity {vanity}", vanity);
+                return new List<ClickStatsPoco>();
+            }
         }
 
-        public async Task<List<ClickStatsEntity>> GetAllStatsAsync()
+        public async Task<List<ClickStatsPoco>> GetAllStatsAsync()
         {
-            var tblUrls = GetStatsTable();
-            TableContinuationToken? token = null;
-            var lstShortUrl = new List<ClickStatsEntity>();
-            TableQuery<ClickStatsEntity> rangeQuery = new TableQuery<ClickStatsEntity>();
-
-            do
+            try
             {
-                var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(rangeQuery, token).ConfigureAwait(false);
+                var tblUrls = GetStatsTable();
 
-                lstShortUrl.AddRange(queryResult.Results);
+                var results = tblUrls.QueryAsync<ClickStatsEntity>();
 
-                token = queryResult.ContinuationToken;
-            } while (token != null);
-
-            return lstShortUrl;
+                List<ClickStatsEntity> entities = new List<ClickStatsEntity>();
+                await foreach (var result in results.ConfigureAwait(false))
+                {
+                    entities.Add(result);
+                }
+                return entities.FromEntity().ToList();
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error getting all stats");
+                return new List<ClickStatsPoco>();
+            }
         }
 
         /// <summary>
@@ -173,32 +169,50 @@ namespace Shortener.Azure
         /// </summary>
         /// <param name="vanity"></param>
         /// <returns>ShortUrlEntity</returns>
-        public async Task<ShortUrlEntity?> GetShortUrlEntityByVanityAsync(string vanity, string? partitionKey = null)
+        public async Task<ShortUrlPoco?> GetShortUrlEntityByVanityAsync(string vanity, string? partitionKey = null)
         {
-            var tblUrls = GetUrlsTable();
-            string filter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, vanity);
-            if (partitionKey is not null)
+            try
             {
-                filter = TableQuery.CombineFilters(filter, TableOperators.And, TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey));
+                var tblUrls = GetUrlsTable();
+
+                if (partitionKey is not null)
+                {
+                    var response = await tblUrls.GetEntityAsync<ShortUrlEntity>(partitionKey, vanity).ConfigureAwait(false);
+                    return response.Value.FromEntity();
+                }
+                else
+                {
+                    string filter = TableClient.CreateQueryFilter<ShortUrlEntity>(s => s.RowKey == vanity);
+                    var results = tblUrls.QueryAsync<ShortUrlEntity>(filter, 1);
+
+                    await foreach (var item in results.AsPages().ConfigureAwait(false))
+                    {
+                        return item.Values.FirstOrDefault()?.FromEntity();
+                    }
+                }
             }
-            TableQuery<ShortUrlEntity> query = new TableQuery<ShortUrlEntity>().Where(
-                            filter: filter);
-            return await SegmentedQuerySingleAsync(tblUrls, query).ConfigureAwait(false);
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error getting all short url entities");
+                return null;
+            }
+
+            return null;
         }
 
         public async Task<bool> IfShortUrlEntityExistByVanityAsync(string vanity, string? partitionKey = null)
         {
-            ShortUrlEntity? shortUrlEntity = await GetShortUrlEntityByVanityAsync(vanity, partitionKey).ConfigureAwait(false);
+            ShortUrlPoco? shortUrlEntity = await GetShortUrlEntityByVanityAsync(vanity, partitionKey).ConfigureAwait(false);
             return shortUrlEntity != null;
         }
 
-        public async Task<bool> IfShortUrlEntityExistAsync(ShortUrlEntity row)
+        public async Task<bool> IfShortUrlEntityExistAsync(ShortUrlPoco row)
         {
-            var eShortUrl = await GetShortUrlEntityAsync(row).ConfigureAwait(false);
+            ShortUrlPoco? eShortUrl = await GetShortUrlEntityAsync(row).ConfigureAwait(false);
             return eShortUrl != null;
         }
 
-        public async Task<ShortUrlEntity?> ArchiveShortUrlEntityAsync(ShortUrlEntity urlEntity)
+        public async Task<ShortUrlPoco?> ArchiveShortUrlEntityAsync(ShortUrlPoco urlEntity)
         {
             if(urlEntity is null)
             {
@@ -218,141 +232,79 @@ namespace Shortener.Azure
             }
         }
 
-        /// <summary>
-        /// Saves a batch of ShortUrlEntity to table storage across multiple partitions
-        /// </summary>
-        /// <param name="newShortUrls"></param>
-        /// <returns></returns>
-        public async Task SaveShortUrlEntitiesCrossPartitionAsync(IEnumerable<ShortUrlEntity> newShortUrls)
+        public async Task<ShortUrlPoco?> SaveShortUrlEntityAsync(ShortUrlPoco newShortUrl)
         {
-            var partitionGroups = newShortUrls.GroupBy(x => x.PartitionKey);
-
-            foreach (var partitionGroup in partitionGroups)
+            try
             {
-                await SaveShortUrlEntitiesAsync(partitionGroup).ConfigureAwait(false);
-            }
-        }
+                var table = GetUrlsTable();
 
-        /// <summary>
-        /// Saves a batch of ShortUrlEntity to table storage
-        /// 
-        /// All entities must have the same partition key
-        /// </summary>
-        /// <param name="newShortUrls"></param>
-        /// <returns></returns>
-        public async Task SaveShortUrlEntitiesAsync(IEnumerable<ShortUrlEntity> newShortUrls)
-        {
-            foreach (var batch in newShortUrls.Batch(100))
-            {
-                TableBatchOperation tableOperations = new TableBatchOperation();
-                foreach (var shortUrl in batch)
+                var response = await table.UpsertEntityAsync(newShortUrl.ToEntity()).ConfigureAwait(false);
+                if(response.IsError)
                 {
-                    tableOperations.InsertOrReplace(shortUrl);
+                      this._logger.LogError("Error saving short url entity: {ReasonPhrase}", response.ReasonPhrase);
+                    return null;
                 }
-                _ = await GetUrlsTable().ExecuteBatchAsync(tableOperations).ConfigureAwait(false);
+                return newShortUrl;
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error saving short url entity");
+                return null;
             }
         }
 
-        public async Task<ShortUrlEntity?> SaveShortUrlEntityAsync(ShortUrlEntity newShortUrl)
+        public async Task SaveClickStatsEntityAsync(ClickStatsPoco newStats)
         {
-            TableOperation insOperation = TableOperation.InsertOrMerge(newShortUrl);
-            TableResult result = await GetUrlsTable().ExecuteAsync(insOperation).ConfigureAwait(false);
-            ShortUrlEntity? eShortUrl = result.Result as ShortUrlEntity;
-            return eShortUrl;
-        }
+            try
+            {
+                var table = GetStatsTable();
 
-        public async Task SaveClickStatsEntityAsync(ClickStatsEntity newStats)
-        {
-            var insOperation = TableOperation.InsertOrMerge(newStats);
-            await GetStatsTable().ExecuteAsync(insOperation).ConfigureAwait(false);
+                var response = await table.AddEntityAsync(newStats.ToEntity()).ConfigureAwait(false);
+                if (response.IsError)
+                {
+                    this._logger.LogError("Error saving click stats entity: {ReasonPhrase}", response.ReasonPhrase);
+                }
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error saving click stats entity");
+            }
         }
 
         public async Task<int> GetNextTableIdForAuthorityAsync(string authority)
         {
             string tableKey = authority.SanitiseForTableKey();
+            TableClient tableClient = GetUrlsTable();
 
-            //Get current ID
-            var selOperation = TableOperation.Retrieve<NextId>(NEXT_ID_PARTITION_KEY, tableKey);
-            var result = await GetUrlsTable().ExecuteAsync(selOperation).ConfigureAwait(false);
-
-            if (result.Result is not NextId entity)
+            try
             {
-                entity = new NextId
+                var response = await tableClient.GetEntityIfExistsAsync<NextIdEntity>(NEXT_ID_PARTITION_KEY, tableKey).ConfigureAwait(false);
+
+                NextIdEntity entity;
+                if (!response.HasValue)
                 {
-                    PartitionKey = NEXT_ID_PARTITION_KEY,
-                    RowKey = tableKey,
-                    Id = 1024
-                };
-            }
-            entity.Id++;
-
-            //Update
-            var updOperation = TableOperation.InsertOrMerge(entity);
-
-            // Execute the operation.
-            await GetUrlsTable().ExecuteAsync(updOperation).ConfigureAwait(false);
-
-            return entity.Id;
-        }
-
-        public async Task MigrateNextTableIdForAuthorityAsync(string authority)
-        {
-            string tableKey = authority.SanitiseForTableKey();
-
-            //Get current ID
-            var selOperation = TableOperation.Retrieve<NextId>("1", NEXT_ID_PARTITION_KEY);
-            var result = await GetUrlsTable().ExecuteAsync(selOperation).ConfigureAwait(false);
-
-            var newEntity = new NextId
-            {
-                PartitionKey = NEXT_ID_PARTITION_KEY,
-                RowKey = tableKey,
-                Id = 1024
-            };
-
-            if (result.Result is NextId entity)
-            {
-                newEntity.Id = entity.Id;
-            }
-
-            //Update
-            var updOperation = TableOperation.InsertOrMerge(newEntity);
-
-            // Execute the operation.
-            await GetUrlsTable().ExecuteAsync(updOperation).ConfigureAwait(false);
-        }
-
-        public async Task RemoveShortUrlsByVersion(int versionNumber)
-        {
-            var tblUrls = GetUrlsTable();
-            TableContinuationToken? token = null;
-            var result = new List<ShortUrlEntity>();
-
-            string filter = TableQuery.GenerateFilterConditionForInt("Version", QueryComparisons.Equal, versionNumber);
-            TableQuery<ShortUrlEntity> rangeQuery = new TableQuery<ShortUrlEntity>().Where(filter);
-
-            do
-            {
-                var queryResult = await tblUrls.ExecuteQuerySegmentedAsync(rangeQuery, token).ConfigureAwait(false);
-
-                result.AddRange(queryResult.Results);
-
-                token = queryResult.ContinuationToken;
-            } while (token != null);
-
-            var partitionGroups = result.GroupBy(x => x.PartitionKey);
-
-            foreach (var partitionGroup in partitionGroups)
-            {
-                foreach (var batch in partitionGroup.Batch(100))
-                {
-                    TableBatchOperation tableOperations = new TableBatchOperation();
-                    foreach (var shortUrl in batch)
+                    entity = new NextIdEntity
                     {
-                        tableOperations.Delete(shortUrl);
-                    }
-                    _ = await GetUrlsTable().ExecuteBatchAsync(tableOperations).ConfigureAwait(false);
+                        PartitionKey = NEXT_ID_PARTITION_KEY,
+                        RowKey = tableKey,
+                        Id = 1024
+                    };
+
+                    await tableClient.AddEntityAsync(entity).ConfigureAwait(false);
                 }
+                else
+                {                     
+                    entity = response.Value;
+                    entity.Id++;
+                    await tableClient.UpsertEntityAsync(entity).ConfigureAwait(false);
+                }
+
+                return entity.Id;
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error getting all short url entities");
+                return 0;
             }
         }
     }

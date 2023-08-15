@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shortener.Azure\Shortener.Azure.csproj" />
+    <ProjectReference Include="..\Shortener.Azure\Shortener.AzureServices.csproj" />
   </ItemGroup>
 
 </Project>

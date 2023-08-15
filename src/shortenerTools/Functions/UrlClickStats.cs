@@ -5,8 +5,8 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
-using Shortener.Azure.Entities;
+using Shortener.AzureServices;
+using Shortener.Core;
 using Shortener.Core.Configuration;
 using ShortenerTools.Abstractions;
 using System;
@@ -42,7 +42,7 @@ namespace ShortenerTools.Functions
 
             try
             {
-                var result = new ClickStatsEntityList
+                var result = new ClickStatsPocoList
                 {
                     ClickStatsList = await _storageTableHelper.GetAllStatsByVanityAsync(clickStatsRequest.Vanity).ConfigureAwait(false)
                 };

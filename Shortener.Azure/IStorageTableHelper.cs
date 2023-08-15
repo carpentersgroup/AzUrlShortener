@@ -1,32 +1,27 @@
-using Shortener.Azure.Entities;
+using Shortener.Azure.Pocos;
 
-namespace Shortener.Azure
+namespace Shortener.AzureServices
 {
     public interface IStorageTableHelper
     {
-        Task<ShortUrlEntity?> GetShortUrlEntityAsync(ShortUrlEntity row);
-        Task<List<ShortUrlEntity>> GetAllShortUrlEntitiesAsync(bool includeArchived);
-        Task<ShortUrlEntity?> GetShortUrlEntityByVanityAsync(string vanity, string? partitionKey = null);
+        Task<ShortUrlPoco?> GetShortUrlEntityAsync(ShortUrlPoco row);
+        Task<List<ShortUrlPoco>> GetAllShortUrlEntitiesAsync(bool includeArchived);
+        Task<ShortUrlPoco?> GetShortUrlEntityByVanityAsync(string vanity, string? partitionKey = null);
 
-        Task<bool> IfShortUrlEntityExistAsync(ShortUrlEntity row);
+        Task<bool> IfShortUrlEntityExistAsync(ShortUrlPoco row);
         Task<bool> IfShortUrlEntityExistByVanityAsync(string vanity, string? partitionKey = null);
 
-        Task<ShortUrlEntity?> ArchiveShortUrlEntityAsync(ShortUrlEntity urlEntity);
+        Task<ShortUrlPoco?> ArchiveShortUrlEntityAsync(ShortUrlPoco urlEntity);
 
-        Task<ShortUrlEntity?> SaveShortUrlEntityAsync(ShortUrlEntity newShortUrl);
-        Task SaveShortUrlEntitiesAsync(IEnumerable<ShortUrlEntity> newShortUrls);
-        Task SaveShortUrlEntitiesCrossPartitionAsync(IEnumerable<ShortUrlEntity> newShortUrls);
-
-        Task RemoveShortUrlsByVersion(int versionNumber);
+        Task<ShortUrlPoco?> SaveShortUrlEntityAsync(ShortUrlPoco newShortUrl);
 
 
-        Task MigrateNextTableIdForAuthorityAsync(string authority);
         Task<int> GetNextTableIdForAuthorityAsync(string authority);
 
 
-        Task<List<ClickStatsEntity>> GetAllStatsByVanityAsync(string? vanity);
-        Task<List<ClickStatsEntity>> GetAllStatsAsync();
-        Task SaveClickStatsEntityAsync(ClickStatsEntity newStats);
+        Task<List<ClickStatsPoco>> GetAllStatsByVanityAsync(string? vanity);
+        Task<List<ClickStatsPoco>> GetAllStatsAsync();
+        Task SaveClickStatsEntityAsync(ClickStatsPoco newStats);
 
 
         Task<string> GetWellKnownContentAsync(string filename);

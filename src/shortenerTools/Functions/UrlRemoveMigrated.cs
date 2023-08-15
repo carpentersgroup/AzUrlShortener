@@ -4,7 +4,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
+using Shortener.AzureServices;
 using Shortener.Core.Configuration;
 using ShortenerTools.Abstractions;
 using System;
@@ -16,9 +16,9 @@ namespace ShortenerTools.Functions
 {
     public class UrlRemoveMigrated : FunctionBase
     {
-        private readonly IStorageTableHelper _storageTableHelper;
+        private readonly IMigrationTableHelper _storageTableHelper;
 
-        public UrlRemoveMigrated(IStorageTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration, HandlerContainer authHandlerContainer) : base(configuration, authHandlerContainer)
+        public UrlRemoveMigrated(IMigrationTableHelper storageTableHelper, IOptions<UrlShortenerConfiguration> configuration, HandlerContainer authHandlerContainer) : base(configuration, authHandlerContainer)
         {
             _storageTableHelper = storageTableHelper;
         }

@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
-using Shortener.Azure.Entities;
+using Shortener.AzureServices;
+using Shortener.AzureServices.Entities;
 using Shortener.Core.Configuration;
-using Shortener.Azure.Extensions;
+using Shortener.AzureServices.Extensions;
 using System.Net;
 using Shortener.Core.Shorten.Algorithms;
+using Shortener.Azure.Pocos;
 
 namespace Shortener.Core.Redirect
 {
@@ -41,7 +42,7 @@ namespace Shortener.Core.Redirect
                     Status = RedirectStatus.Invalid
                 };
             }
-            ShortUrlEntity? newUrl;
+            ShortUrlPoco? newUrl;
 
             string hostPartitionKey = host.SanitiseForTableKey();
             newUrl = await _storageTableHelper.GetShortUrlEntityByVanityAsync(shortUrl, hostPartitionKey).ConfigureAwait(false);
@@ -58,7 +59,7 @@ namespace Shortener.Core.Redirect
 
                 await SetUrlClickStatsAsync(newUrl, ipAddress).ConfigureAwait(false);
 
-                ClickStatsEntity newStats = new ClickStatsEntity(newUrl.RowKey, host);
+                ClickStatsPoco newStats = new ClickStatsPoco(newUrl.Vanity, host);
                 List<Task> tasks = new List<Task>
                 {
                     _storageTableHelper.SaveClickStatsEntityAsync(newStats),
@@ -86,9 +87,9 @@ namespace Shortener.Core.Redirect
         }
 
         [Obsolete("Remove this once all links have been migrated to the new format")]
-        private async Task<ShortUrlEntity?> FallbackToPreMigrationFetch(string shortUrl, ShortUrlEntity? newUrl)
+        private async Task<ShortUrlPoco?> FallbackToPreMigrationFetch(string shortUrl, ShortUrlPoco? newUrl)
         {
-            var tempUrl = new ShortUrlEntity(shortUrl.First().ToString(), string.Empty, shortUrl);
+            var tempUrl = new ShortUrlPoco(shortUrl.First().ToString(), string.Empty, shortUrl);
             var tempNewUrl = await _storageTableHelper.GetShortUrlEntityAsync(tempUrl).ConfigureAwait(false);
             if (tempNewUrl is not null && tempNewUrl.Algorithm == (int)ShortenerAlgorithm.None)
             {
@@ -98,7 +99,7 @@ namespace Shortener.Core.Redirect
             return newUrl;
         }
 
-        private async Task SetUrlClickStatsAsync(ShortUrlEntity newUrl, IPAddress? ip)
+        private async Task SetUrlClickStatsAsync(ShortUrlPoco newUrl, IPAddress? ip)
         {
             newUrl.Clicks++;
 

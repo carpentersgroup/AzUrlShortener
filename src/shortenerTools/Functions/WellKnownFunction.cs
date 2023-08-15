@@ -2,7 +2,7 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using Shortener.Azure;
+using Shortener.AzureServices;
 using System.Threading.Tasks;
 
 namespace ShortenerTools.Functions

@@ -19,8 +19,9 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
-using Shortener.Azure.Entities;
+using Shortener.Azure.Pocos;
+using Shortener.AzureServices;
+using Shortener.AzureServices.Entities;
 using Shortener.Core.Configuration;
 using ShortenerTools.Abstractions;
 using System;
@@ -42,7 +43,7 @@ namespace ShortenerTools.Functions
         //TODO: Replace Entity with a DTO
         [FunctionName("UrlArchive")]
         public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] ShortUrlEntity shortUrlEntity, Microsoft.AspNetCore.Http.HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] ShortUrlPoco shortUrlEntity, Microsoft.AspNetCore.Http.HttpRequest req,
         ILogger log,
         ClaimsPrincipal principal)
         {
@@ -57,7 +58,7 @@ namespace ShortenerTools.Functions
 
             try
             {
-                ShortUrlEntity? updatedShortUrlEntity = await _storageTableHelper.ArchiveShortUrlEntityAsync(shortUrlEntity).ConfigureAwait(false);
+                ShortUrlPoco? updatedShortUrlEntity = await _storageTableHelper.ArchiveShortUrlEntityAsync(shortUrlEntity).ConfigureAwait(false);
                 if (updatedShortUrlEntity is null)
                 {
                     return new NotFoundObjectResult(new

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
+using Shortener.AzureServices;
 using Shortener.Core.Configuration;
 using Shortener.Core.Shorten.Algorithms;
 

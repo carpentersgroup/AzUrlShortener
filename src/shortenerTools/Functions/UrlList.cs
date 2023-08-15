@@ -22,7 +22,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
+using Shortener.AzureServices;
 using Shortener.Core.Configuration;
 using ShortenerTools.Abstractions;
 using System;
@@ -75,7 +75,7 @@ namespace ShortenerTools.Functions
 
                 foreach (var shortUrl in result.UrlList.Where(u => string.IsNullOrWhiteSpace(u.ShortUrl)))
                 {
-                    shortUrl.ShortUrl = Utility.GetShortUrl(host, shortUrl.RowKey);
+                    shortUrl.ShortUrl = Utility.GetShortUrl(host, shortUrl.Vanity);
                 }
 
                 return new OkObjectResult(result);

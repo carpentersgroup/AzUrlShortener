@@ -32,7 +32,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using ShortenerTools.Abstractions;
 using Microsoft.Extensions.Options;
-using Shortener.Azure;
+using Shortener.AzureServices;
 using Shortener.Core.Configuration;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -71,10 +71,10 @@ namespace ShortenerTools.Functions
 
             try
             {
-                System.Collections.Generic.List<Shortener.Azure.Entities.ClickStatsEntity> rawStats = await _storageTableHelper.GetAllStatsByVanityAsync(clickStatsRequest.Vanity).ConfigureAwait(false);
+                System.Collections.Generic.List<Shortener.Azure.Pocos.ClickStatsPoco> rawStats = await _storageTableHelper.GetAllStatsByVanityAsync(clickStatsRequest.Vanity).ConfigureAwait(false);
 
                 result.Items = rawStats.Where(s => s.Datetime != null)
-                                        .GroupBy(s => DateOnly.ParseExact(s.Datetime!, Shortener.Azure.Entities.Constants.CLICK_STATS_DATE_FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None))
+                                        .GroupBy(s => DateOnly.ParseExact(s.Datetime!, Shortener.AzureServices.Entities.Constants.CLICK_STATS_DATE_FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None))
                                             .Select(stat => new ClickDate
                                             {
                                                 DateClicked = stat.Key.ToString(CLICK_DATE_FORMAT),

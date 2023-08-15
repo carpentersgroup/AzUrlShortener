@@ -1,4 +1,4 @@
-﻿namespace Shortener.Azure.Entities
+﻿namespace Shortener.AzureServices.Entities
 {
     public static class Constants
     {

@@ -1,4 +1,4 @@
-namespace Shortener.Azure.Entities
+namespace Shortener.Azure.Pocos
 {
     public class Schedule
     {

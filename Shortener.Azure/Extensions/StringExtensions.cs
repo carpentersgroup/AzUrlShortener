@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Shortener.Azure.Extensions
+namespace Shortener.AzureServices.Extensions
 {
     public static class StringExtensions
     {

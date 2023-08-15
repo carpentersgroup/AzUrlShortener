@@ -1,5 +1,5 @@
 ﻿using Cronos;
-using Shortener.Azure.Entities;
+using Shortener.Azure.Pocos;
 
 namespace Cloud5mins.domain
 {

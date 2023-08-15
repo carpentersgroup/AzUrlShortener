@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using Shortener.Azure;
-using Shortener.Azure.Entities;
-using Shortener.Azure.Extensions;
+using Shortener.Azure.Pocos;
+using Shortener.AzureServices;
+using Shortener.AzureServices.Extensions;
 using Shortener.Core.Shorten.Algorithms;
 
 namespace Shortener.Core.Shorten
@@ -80,21 +80,21 @@ namespace Shortener.Core.Shorten
                 shortRequest.Vanity = generateResult.Vanity;
             }
 
-            ShortUrlEntity newRow = new ShortUrlEntity(shortRequest.Host.Authority.SanitiseForTableKey(), shortRequest.Url.ToString(), shortRequest.Vanity, title, shortRequest.Schedules);
+            ShortUrlPoco newRow = new ShortUrlPoco(shortRequest.Host.Authority.SanitiseForTableKey(), shortRequest.Url.ToString(), shortRequest.Vanity, title, shortRequest.Schedules);
             newRow.Version = 1;
             newRow.Algorithm = (int)algorithm;
-            
+
             string hostUrl = shortRequest.Host.ToString();
             
             _logger.LogInformation("-> host = {hostUrl}", hostUrl);
 
-            newRow.ShortUrl = string.Concat(hostUrl.TrimEnd('/'), "/", newRow.RowKey);
+            newRow.ShortUrl = string.Concat(hostUrl.TrimEnd('/'), "/", newRow.Vanity);
             
             await _storageTableHelper.SaveShortUrlEntityAsync(newRow).ConfigureAwait(false);
 
             
 
-            var result = new ShortResponse(hostUrl, newRow.Url, newRow.RowKey, newRow.Title);
+            var result = new ShortResponse(hostUrl, newRow.Url, newRow.Vanity, newRow.Title);
 
             _logger.LogInformation("Short Url created.");
 

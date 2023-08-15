@@ -1,4 +1,4 @@
-﻿namespace Shortener.Azure.Extensions
+﻿namespace Shortener.AzureServices.Extensions
 {
     public static class EnumerableExtensions
     {

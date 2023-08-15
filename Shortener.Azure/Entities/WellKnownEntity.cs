@@ -1,30 +1,22 @@
-﻿using Microsoft.Azure.Cosmos.Table;
-
-namespace Shortener.Azure.Entities
+﻿namespace Shortener.AzureServices.Entities
 {
-    public class WellKnownEntity : TableEntity
+    public class WellKnownEntity : AbstractTableEntity
     {
-        public WellKnownEntity() 
+        public WellKnownEntity() : base("WellKnown", "")
         {
             Content = "";
         }
 
-        public WellKnownEntity(string filename)
+        public WellKnownEntity(string filename) : base("WellKnown", filename)
         {
-            PartitionKey = "WellKnown";
-            RowKey = filename;
             Content = "";
         }
 
-        public WellKnownEntity(string filename, string content)
+        public WellKnownEntity(string filename, string content) : base("WellKnown", filename)
         {
-            PartitionKey = "WellKnown";
-            RowKey = filename;
             Content = content;
         }
 
         public string Content { get; set; }
     }
-
-
 }

@@ -1,7 +1,7 @@
 ﻿using Cronos;
-using Shortener.Azure.Entities;
+using Shortener.Azure.Pocos;
 
-namespace Shortener.Azure.Extensions
+namespace Shortener.AzureServices.Extensions
 {
     public static class ScheduleExtensions
     {

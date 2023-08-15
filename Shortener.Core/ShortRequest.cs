@@ -1,4 +1,4 @@
-using Shortener.Azure.Entities;
+using Shortener.Azure.Pocos;
 using System.ComponentModel.DataAnnotations;
 
 namespace Shortener.Core
