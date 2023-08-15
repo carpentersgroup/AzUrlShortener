@@ -1,7 +1,9 @@
-﻿namespace Shortener.Core.Shorten
+﻿using Shortener.Core.Shorten.Algorithms;
+
+namespace Shortener.Core.Shorten
 {
     public interface IUrlGenerator
     {
-        Task<string> GenerateAsync(string? host);
+        Task<(string Vanity, ShortenerAlgorithm Algorithm)> GenerateAsync(string? host);
     }
 }

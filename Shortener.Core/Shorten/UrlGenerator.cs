@@ -19,7 +19,7 @@ namespace Shortener.Core.Shorten
             _options = options.Value;
         }
 
-        public async Task<string> GenerateAsync(string? host)
+        public async Task<(string Vanity, ShortenerAlgorithm Algorithm)> GenerateAsync(string? host)
         {
             if (_options.DefaultAlgorithm == ShortenerAlgorithm.IdPlusRandomFixedLength
                 || _options.DefaultAlgorithm == ShortenerAlgorithm.EncodeDecode)
@@ -38,26 +38,29 @@ namespace Shortener.Core.Shorten
                         var endUrl = await GetValidEndUrlFixedLength(_storageTableHelper, hasher).ConfigureAwait(false);
                         int id = await this._storageTableHelper.GetNextTableIdForAuthorityAsync(host!).ConfigureAwait(false);
 
-                        return id + endUrl;
+                        return (id + endUrl, _options.DefaultAlgorithm);
                     }
                     break;
                 case ShortenerAlgorithm.RandomFixedLength:
                     {
                         var hasher = this._serviceProvider.GetRequiredService<IHash>();
-                        return await GetValidEndUrlFixedLength(_storageTableHelper, hasher).ConfigureAwait(false);
+                        var endUrl =  await GetValidEndUrlFixedLength(_storageTableHelper, hasher).ConfigureAwait(false);
+                        return (endUrl, _options.DefaultAlgorithm);
                     }
                     break;
                 case ShortenerAlgorithm.RandomExtendableLength:
                     {
                         var hasher = this._serviceProvider.GetRequiredService<IHash>();
-                        return await GetValidEndUrl(_storageTableHelper, hasher).ConfigureAwait(false);
+                        var endUrl = await GetValidEndUrl(_storageTableHelper, hasher).ConfigureAwait(false);
+                        return (endUrl, _options.DefaultAlgorithm);
                     }
                     break;
                 case ShortenerAlgorithm.EncodeDecode:
                     {
                         var encoder = this._serviceProvider.GetRequiredService<IEncode>();
                         int id = await this._storageTableHelper.GetNextTableIdForAuthorityAsync(host!).ConfigureAwait(false);
-                        return encoder.Encode(id);
+                        var endUrl = encoder.Encode(id);
+                        return (endUrl, _options.DefaultAlgorithm);
                     }
                     break;
                 default:

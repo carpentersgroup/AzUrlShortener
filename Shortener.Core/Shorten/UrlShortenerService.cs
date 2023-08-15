@@ -2,6 +2,7 @@
 using Shortener.Azure;
 using Shortener.Azure.Entities;
 using Shortener.Azure.Extensions;
+using Shortener.Core.Shorten.Algorithms;
 
 namespace Shortener.Core.Shorten
 {
@@ -57,6 +58,7 @@ namespace Shortener.Core.Shorten
 
             bool hasVanitySupplied = !string.IsNullOrWhiteSpace(shortRequest.Vanity);
 
+            ShortenerAlgorithm algorithm = ShortenerAlgorithm.None;
             if(hasVanitySupplied)
             {
                 shortRequest.Vanity = shortRequest.Vanity!.Trim();
@@ -73,10 +75,14 @@ namespace Shortener.Core.Shorten
             }
             else
             {
-                shortRequest.Vanity = await _shortUrlGenerator.GenerateAsync(shortRequest.Host.Authority).ConfigureAwait(false);                
+                var generateResult = await _shortUrlGenerator.GenerateAsync(shortRequest.Host.Authority).ConfigureAwait(false);
+                algorithm = generateResult.Algorithm;
+                shortRequest.Vanity = generateResult.Vanity;
             }
 
             ShortUrlEntity newRow = new ShortUrlEntity(shortRequest.Host.Authority.SanitiseForTableKey(), shortRequest.Url.ToString(), shortRequest.Vanity, title, shortRequest.Schedules);
+            newRow.Version = 1;
+            newRow.Algorithm = (int)algorithm;
             
             string hostUrl = shortRequest.Host.ToString();
             
