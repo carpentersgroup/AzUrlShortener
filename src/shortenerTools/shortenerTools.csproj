@@ -3,10 +3,9 @@
     <TargetFramework>net6.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
 	<Nullable>enable</Nullable>
-	<PublishTrimmed>true</PublishTrimmed>
 	<PublishReadyToRun>true</PublishReadyToRun>
 	<TieredCompilation>true</TieredCompilation>
-	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+	<RuntimeIdentifier>win-x86</RuntimeIdentifier>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="cronos" Version="0.7.1" />
@@ -41,10 +40,10 @@
   </ItemGroup>
 	<Target Name="CopyMissingAssemblies" AfterTargets="_FunctionsBuildCleanOutput">
 	  <Message Text="CopyMissingAssemblies" />
-	  <Copy SourceFiles="@(MissingAssembly->'$(NuGetPackageRoot)\%(Identity)\%(Version)\lib\$(TargetFramework)\%(Identity).dll')" DestinationFolder="$(OutDir)\bin" />
+	  <Copy SourceFiles="@(MissingAssembly->'$(NuGetPackageRoot)\%(Identity)\%(Version)\lib\$(TargetFramework)\%(Identity).dll')" DestinationFolder="$(TargetDir)bin" />
 	</Target>
-	<Target Name="CopyMissingAssembliesToPublish" AfterTargets="CopyMissingAssemblies">
+	<Target Name="CopyMissingAssembliesToPublish" AfterTargets="_FunctionsPublishCleanOutput">
 	  <Message Text="CopyMissingAssembliesToPublish" />
-	  <Copy SourceFiles="@(MissingAssembly->'$(OutDir)\bin\%(Identity).dll')" DestinationFolder="$(PublishDir)\bin" />
+	  <Copy SourceFiles="@(MissingAssembly->'$(OutDir)\bin\%(Identity).dll')" DestinationFolder="$(PublishDir)bin" />
 	</Target>
 </Project>
