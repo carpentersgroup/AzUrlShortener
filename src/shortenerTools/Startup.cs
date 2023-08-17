@@ -25,6 +25,8 @@ namespace ShortenerTools
 
         internal static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
+            //TODO: Fix this cold start 14second business!!!
+            //TODO: Lets try the tree shaking thing
             services.AddLogging();
 
             services.Configure<UrlShortenerConfiguration>(configuration.GetSection(UrlShortenerConfiguration.KEY));

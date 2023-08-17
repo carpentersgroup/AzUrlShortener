@@ -3,17 +3,18 @@
     <TargetFramework>net6.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
 	<Nullable>enable</Nullable>
-	<_FunctionsSkipCleanOutput>true</_FunctionsSkipCleanOutput>
+	<PublishTrimmed>true</PublishTrimmed>
+	<PublishReadyToRun>true</PublishReadyToRun>
+	<TieredCompilation>true</TieredCompilation>
+	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="cronos" Version="0.7.1" />
-    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
     <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Http" Version="3.2.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.32.1" />
-	  <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.2.0" />
-	  <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
+	<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.2.0" />
+	<PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Fizziblly.Auth\Fizzibly.Auth.csproj" />
@@ -26,11 +27,24 @@
     <None Update="example.local.settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="proxies.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="local.settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+	  <MissingAssembly Include="Microsoft.IdentityModel.Abstractions" Version="6.32.1" />
+	  <MissingAssembly Include="Microsoft.IdentityModel.Logging" Version="6.32.1" />
+	  <MissingAssembly Include="Microsoft.IdentityModel.Tokens" Version="6.32.1" />
+	  <MissingAssembly Include="Microsoft.IdentityModel.Protocols" Version="6.32.1" />
+	  <MissingAssembly Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.32.1" />
+	  <MissingAssembly Include="System.IdentityModel.Tokens.Jwt" Version="6.32.1" />
+  </ItemGroup>
+	<Target Name="CopyMissingAssemblies" AfterTargets="_FunctionsBuildCleanOutput">
+	  <Message Text="CopyMissingAssemblies" />
+	  <Copy SourceFiles="@(MissingAssembly->'$(NuGetPackageRoot)\%(Identity)\%(Version)\lib\$(TargetFramework)\%(Identity).dll')" DestinationFolder="$(OutDir)\bin" />
+	</Target>
+	<Target Name="CopyMissingAssembliesToPublish" AfterTargets="CopyMissingAssemblies">
+	  <Message Text="CopyMissingAssembliesToPublish" />
+	  <Copy SourceFiles="@(MissingAssembly->'$(OutDir)\bin\%(Identity).dll')" DestinationFolder="$(PublishDir)\bin" />
+	</Target>
 </Project>
