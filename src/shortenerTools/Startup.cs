@@ -1,48 +1,58 @@
-﻿using Cloud5mins.domain;
-using Cloud5mins.Function;
-using Microsoft.Azure.Cosmos.Table;
+﻿using Azure.Data.Tables;
+using Fizzibly.Auth;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using shortenerTools;
-using shortenerTools.Abstractions;
-using shortenerTools.Implementations;
+using Shortener.AzureServices;
+using Shortener.Core.Configuration;
+using Shortener.Core.Redirect;
+using Shortener.Core.Shorten;
+using ShortenerTools;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
+
 [assembly: FunctionsStartup(typeof(Startup))]
-namespace shortenerTools
+namespace ShortenerTools
 {
     [ExcludeFromCodeCoverage]
     public class Startup : FunctionsStartup
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            var configuration = builder.GetContext().Configuration;
+            ConfigureServices(builder.Services, builder.GetContext().Configuration);
+        }
 
-            builder.Services.Configure<UrlShortenerConfiguration>(config =>
-            {
-                config.CustomDomain = configuration.GetValue<string>("customDomain");
-                config.UrlShortenApiRoleName = configuration.GetValue<string>("urlShortenApiRoleName");
-                config.EnableApiAccess = configuration.GetValue<bool>("enableApiAccess");
-                config.Code = configuration.GetValue<string>("code");
-            });
+        internal static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+        {
+            //TODO: Fix this cold start 14second business!!!
+            //TODO: Lets try the tree shaking thing
+            services.AddLogging();
 
-            builder.Services.AddHttpClient<IUserIpLocationService, UserIpLocationService>(client =>
+            services.Configure<UrlShortenerConfiguration>(configuration.GetSection(UrlShortenerConfiguration.KEY));
+
+            services.AddSingleton<IUrlRedirectService, UrlRedirectService>();
+            services.AddSingleton<IUrlShortenerService, UrlShortenerService>();
+
+            services.Configure<Fizzibly.Auth.JwtSettings>(configuration.GetSection(Fizzibly.Auth.JwtSettings.KEY));
+            services.AddAuthHandlers();
+            services.RegisterAuthHandlers();
+
+            services.AddHttpClient<IUserIpLocationService, UserIpLocationService>(client =>
             {
                 client.BaseAddress = new Uri(configuration.GetSection("IpLocationService:Url").Value);
             });
 
-            builder.Services.AddSingleton<IStorageTableHelper, StorageTableHelper>(provider =>
+            services.AddSingleton<TableServiceClient>(s =>
             {
-                var storageAccount = CloudStorageAccount.Parse(configuration.GetSection("UlsDataStorage").Value);
-                var tableClient = storageAccount.CreateCloudTableClient();
-                var logger = provider.GetService<ILogger<StorageTableHelper>>();
-
-                var storageHelper = new StorageTableHelper(tableClient, logger);
-                return storageHelper;
+                TableServiceClient serviceClient = new TableServiceClient(configuration.GetSection("UlsDataStorage").Value);
+                return serviceClient;
             });
+
+            services.AddSingleton<IStorageTableHelper, StorageTableHelper>();
+            services.AddSingleton<IMigrationTableHelper, MigrationTableHelper>();
+
+            services.AddUrlGeneration();
         }
     }
 }

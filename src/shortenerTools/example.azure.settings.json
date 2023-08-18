@@ -1,0 +1,67 @@
+[
+    {
+        "name": "UlsDataStorage",
+        "value": "UseDevelopmentStorage=true",
+        "slotSetting": false
+    },
+    {
+        "name": "UrlShortener:DefaultRedirectUrl",
+        "value": "https://google.com",
+        "slotSetting": false
+    },
+    {
+        "name": "UrlShortener:CustomDomain",
+        "value": "https://c5m.ca",
+        "slotSetting": false
+    },
+    {
+        "name": "UrlShortener:EnableApiAccess",
+        "value": true,
+        "slotSetting": false
+    },
+    {
+        "name": "UrlShortener:RecordCountryStats",
+        "value": true,
+        "slotSetting": false
+    },
+    {
+        "name": "IpLocationService:Url",
+        "value": "https://api.ipbase.com/v1",
+        "slotSetting": false
+    },
+    {
+        "name": "UrlShortener:DefaultAlgorithm",
+        "value": "RandomExtendableLength",
+        "slotSetting": false
+    },
+    {
+        "name": "UrlShortener:AlphabetProvider",
+        "value": "NoProfanity",
+        "slotSetting": false
+    },
+    {
+        "name": "JwtSettings:AllowedTenants:0",
+        "value": "00000000-1111-2222-3333-444444444444",
+        "slotSetting": false
+    },
+    {
+        "name": "JwtSettings:AllowedClients:0",
+        "value": "11111111-2222-3333-4444-555555555555",
+        "slotSetting": false
+    },
+    {
+        "name": "JwtSettings:AllowedClients:1",
+        "value": "22222222-3333-4444-5555-666666666666",
+        "slotSetting": false
+    },
+    {
+        "name": "JwtSettings:MetadataAddress",
+        "value": "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
+        "slotSetting": false
+    },
+    {
+        "name": "JwtSettings:RequiredRoles:0",
+        "value": "admin",
+        "slotSetting": false
+    }
+]
