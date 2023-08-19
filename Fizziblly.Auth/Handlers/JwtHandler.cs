@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Fizzibly.Auth.Handlers.Abstractions;
+using Fizzibly.Auth.Models;
+using Fizzibly.Auth.Validators;
+using Microsoft.Extensions.Options;
 
-namespace Fizzibly.Auth
+namespace Fizzibly.Auth.Handlers
 {
     public class JwtHandler : BaseHandler, IHandler
     {
@@ -8,7 +11,7 @@ namespace Fizzibly.Auth
 
         public JwtHandler(IOptions<JwtSettings> jwtSettings)
         {
-            this._jwtSettings = jwtSettings.Value;
+            _jwtSettings = jwtSettings.Value;
         }
 
         public async Task<AuthResult> Handle(object request)
@@ -20,7 +23,7 @@ namespace Fizzibly.Auth
                     return AuthResult.Unauthorized;
                 }
 
-                if(this._next is null)
+                if (_next is null)
                 {
                     return AuthResult.Ok;
                 }
@@ -35,16 +38,16 @@ namespace Fizzibly.Auth
                     return AuthResult.Unauthorized;
                 }
 
-                return await this._next.Handle(principal with { Principal = validatedClaimsPrincipal }).ConfigureAwait(false);
+                return await _next.Handle(principal with { Principal = validatedClaimsPrincipal }).ConfigureAwait(false);
             }
             else
             {
-                if (this._next is null)
+                if (_next is null)
                 {
                     return AuthResult.Ok;
                 }
 
-                return await this._next.Handle(request).ConfigureAwait(false);
+                return await _next.Handle(request).ConfigureAwait(false);
             }
         }
     }

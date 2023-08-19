@@ -1,5 +1,6 @@
 ﻿using Azure.Data.Tables;
 using Fizzibly.Auth;
+using Fizzibly.Auth.Models;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,8 +26,6 @@ namespace ShortenerTools
 
         internal static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
-            //TODO: Fix this cold start 14second business!!!
-            //TODO: Lets try the tree shaking thing
             services.AddLogging();
 
             services.Configure<UrlShortenerConfiguration>(configuration.GetSection(UrlShortenerConfiguration.KEY));
@@ -34,7 +33,7 @@ namespace ShortenerTools
             services.AddSingleton<IUrlRedirectService, UrlRedirectService>();
             services.AddSingleton<IUrlShortenerService, UrlShortenerService>();
 
-            services.Configure<Fizzibly.Auth.JwtSettings>(configuration.GetSection(Fizzibly.Auth.JwtSettings.KEY));
+            services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.KEY));
             services.AddAuthHandlers();
             services.RegisterAuthHandlers();
 

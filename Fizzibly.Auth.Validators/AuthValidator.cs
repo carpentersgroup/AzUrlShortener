@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace Fizzibly.Auth
+namespace Fizzibly.Auth.Validators
 {
     public static class AuthValidator
     {
@@ -13,7 +13,7 @@ namespace Fizzibly.Auth
             IEnumerable<string>? tenantIds,
             Func<IEnumerable<string>, List<string>>? issuerTransformer = null,
             IEnumerable<string>? clientIds = null,
-            CancellationToken ct = default(CancellationToken))
+            CancellationToken ct = default)
         {
             if (string.IsNullOrEmpty(token)) throw new ArgumentNullException(nameof(token));
             ArgumentNullException.ThrowIfNull(tenantIds);

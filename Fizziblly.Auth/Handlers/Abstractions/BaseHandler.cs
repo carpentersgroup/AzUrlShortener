@@ -1,4 +1,4 @@
-﻿namespace Fizzibly.Auth
+﻿namespace Fizzibly.Auth.Handlers.Abstractions
 {
     public abstract class BaseHandler
     {
@@ -6,7 +6,7 @@
 
         public IHandler? Use(IHandler? handler)
         {
-            this._next = handler;
+            _next = handler;
             return handler;
         }
     }

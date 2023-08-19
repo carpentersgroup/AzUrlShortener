@@ -1,4 +1,4 @@
-﻿namespace Fizzibly.Auth
+﻿namespace Fizzibly.Auth.Models
 {
     public class JwtSettings
     {

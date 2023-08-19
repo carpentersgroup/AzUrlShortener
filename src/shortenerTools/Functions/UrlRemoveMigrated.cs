@@ -1,4 +1,4 @@
-﻿using Fizzibly.Auth;
+﻿using Fizzibly.Auth.Handlers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;

@@ -1,4 +1,6 @@
-﻿namespace Fizzibly.Auth
+﻿using Fizzibly.Auth.Handlers.Abstractions;
+
+namespace Fizzibly.Auth.Handlers
 {
     public class HandlerContainer
     {

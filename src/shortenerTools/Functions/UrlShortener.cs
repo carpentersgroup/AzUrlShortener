@@ -50,7 +50,7 @@ using Shortener.Core.Shorten;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Fizzibly.Auth;
+using Fizzibly.Auth.Handlers;
 
 namespace ShortenerTools.Functions
 {

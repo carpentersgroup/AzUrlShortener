@@ -36,8 +36,8 @@ using Shortener.AzureServices;
 using Shortener.Core.Configuration;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Fizzibly.Auth;
 using System.Globalization;
+using Fizzibly.Auth.Handlers;
 
 namespace ShortenerTools.Functions
 {

@@ -1,4 +1,6 @@
-﻿namespace Fizzibly.Auth
+﻿using Fizzibly.Auth.Models;
+
+namespace Fizzibly.Auth.Handlers.Abstractions
 {
     public interface IHandler
     {

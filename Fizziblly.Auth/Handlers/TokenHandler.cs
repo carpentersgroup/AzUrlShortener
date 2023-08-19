@@ -1,4 +1,7 @@
-﻿namespace Fizzibly.Auth
+﻿using Fizzibly.Auth.Handlers.Abstractions;
+using Fizzibly.Auth.Models;
+
+namespace Fizzibly.Auth.Handlers
 {
     public class TokenHandler : BaseHandler, IHandler
     {
@@ -12,20 +15,20 @@
                     return AuthResult.Unauthorized;
                 }
 
-                if (this._next is null)
+                if (_next is null)
                 {
                     return AuthResult.Ok;
                 }
 
-                return await this._next.Handle(principal with { Token = token }).ConfigureAwait(false);
+                return await _next.Handle(principal with { Token = token }).ConfigureAwait(false);
             }
 
-            if (this._next is null)
+            if (_next is null)
             {
                 return AuthResult.Ok;
             }
 
-            return await this._next.Handle(request).ConfigureAwait(false);
+            return await _next.Handle(request).ConfigureAwait(false);
         }
     }
 }

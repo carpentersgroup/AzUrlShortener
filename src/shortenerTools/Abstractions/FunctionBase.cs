@@ -1,4 +1,6 @@
 using Fizzibly.Auth;
+using Fizzibly.Auth.Handlers;
+using Fizzibly.Auth.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Shortener.Core.Configuration;
@@ -53,6 +55,12 @@ namespace ShortenerTools.Abstractions
 
         public async Task<IActionResult?> HandleAuth(ClaimsPrincipal principal, Microsoft.AspNetCore.Http.HttpRequest requestMessage)
         {
+#if DEBUG
+            if(System.Diagnostics.Debugger.IsAttached)
+            {
+                return null;
+            }   
+#endif
             AuthResult authResult = await _handlerContainer.Handler.Handle(new JwtAuthRequest(requestMessage, principal, null)).ConfigureAwait(false);
 
             return authResult switch

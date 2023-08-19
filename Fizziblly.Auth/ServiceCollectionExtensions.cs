@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Fizzibly.Auth.Handlers;
+using Fizzibly.Auth.Handlers.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Fizzibly.Auth
 {

@@ -1,4 +1,4 @@
-﻿using Fizzibly.Auth;
+﻿using Fizzibly.Auth.Models;
 using System;
 using System.Runtime.Serialization;
 

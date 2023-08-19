@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Fizzibly.Auth.Handlers.Abstractions;
+using Fizzibly.Auth.Models;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
-namespace Fizzibly.Auth
+namespace Fizzibly.Auth.Handlers
 {
     public class UserHandler : BaseHandler, IHandler
     {
@@ -23,7 +25,7 @@ namespace Fizzibly.Auth
 
                 AuthResult authResult = CheckUserImpersonatedAuth(principal.Principal);
 
-                if (this._next is null || authResult != AuthResult.Ok)
+                if (_next is null || authResult != AuthResult.Ok)
                 {
                     return authResult;
                 }
@@ -32,12 +34,12 @@ namespace Fizzibly.Auth
             }
             else
             {
-                if (this._next is null)
+                if (_next is null)
                 {
                     return AuthResult.Ok;
                 }
 
-                return await this._next.Handle(request).ConfigureAwait(false);
+                return await _next.Handle(request).ConfigureAwait(false);
             }
         }
 

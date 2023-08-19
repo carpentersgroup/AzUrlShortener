@@ -92,6 +92,7 @@ namespace Shortener.Core.Redirect
             var tempNewUrl = await _storageTableHelper.GetShortUrlEntityAsync(tempUrl).ConfigureAwait(false);
             if (tempNewUrl is not null && tempNewUrl.Algorithm == (int)ShortenerAlgorithm.None)
             {
+                tempUrl.Version = 0;
                 newUrl = tempNewUrl;
             }
 
