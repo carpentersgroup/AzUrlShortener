@@ -10,7 +10,7 @@ namespace Shortener.AzureServices
         Task<List<ShortUrlEntity>> GetAllShortUrlEntitiesAsync();
         Task MigrateNextTableIdForAuthorityAsync(string authority);
         Task RemoveShortUrlsByVersion(int versionNumber);
-        Task SaveShortUrlEntitiesCrossPartitionAsync(IEnumerable<ShortUrlEntity> newShortUrls);
+        Task SaveShortUrlEntitiesCrossPartitionAsync(IEnumerable<ShortUrlEntity> newShortUrls, bool upsert);
     }
 
     public class MigrationTableHelper : IMigrationTableHelper
@@ -91,13 +91,13 @@ namespace Shortener.AzureServices
         /// </summary>
         /// <param name="newShortUrls"></param>
         /// <returns></returns>
-        public async Task SaveShortUrlEntitiesCrossPartitionAsync(IEnumerable<ShortUrlEntity> newShortUrls)
+        public async Task SaveShortUrlEntitiesCrossPartitionAsync(IEnumerable<ShortUrlEntity> newShortUrls, bool upsert)
         {
             var partitionGroups = newShortUrls.GroupBy(x => x.PartitionKey);
 
             foreach (var partitionGroup in partitionGroups)
             {
-                await SaveShortUrlEntitiesAsync(partitionGroup).ConfigureAwait(false);
+                await SaveShortUrlEntitiesAsync(partitionGroup, upsert).ConfigureAwait(false);
             }
         }
 
@@ -109,7 +109,7 @@ namespace Shortener.AzureServices
         /// </summary>
         /// <param name="newShortUrls"></param>
         /// <returns></returns>
-        private async Task SaveShortUrlEntitiesAsync(IEnumerable<ShortUrlEntity> newShortUrls)
+        private async Task SaveShortUrlEntitiesAsync(IEnumerable<ShortUrlEntity> newShortUrls, bool upsert)
         {
             var table = GetUrlsTable();
             foreach (var batch in newShortUrls.Batch(100))
@@ -118,7 +118,7 @@ namespace Shortener.AzureServices
                 List<TableTransactionAction> addEntitiesBatch = new List<TableTransactionAction>();
 
                 // Add the entities to be added to the batch.
-                addEntitiesBatch.AddRange(batch.Select(e => new TableTransactionAction(TableTransactionActionType.Add, e)));
+                addEntitiesBatch.AddRange(batch.Select(e => new TableTransactionAction(upsert ? TableTransactionActionType.UpdateMerge : TableTransactionActionType.Add, e)));
 
                 try
                 {

@@ -54,7 +54,7 @@ namespace ShortenerTools.Functions
                         shortUrl.Algorithm = (int)ShortenerAlgorithm.IdPlusRandomFixedLength;
                     }
                 }
-                await _storageTableHelper.SaveShortUrlEntitiesCrossPartitionAsync(shortUrls).ConfigureAwait(false);
+                await _storageTableHelper.SaveShortUrlEntitiesCrossPartitionAsync(shortUrls, true).ConfigureAwait(false);
 
                 sw.Reset();
                 log.LogInformation($"Updated {shortUrls.Count} short urls in {sw.ElapsedMilliseconds} ms.");
@@ -77,7 +77,7 @@ namespace ShortenerTools.Functions
                 totalMilliseconds += sw.ElapsedMilliseconds;
                 sw.Start();
 
-                await _storageTableHelper.SaveShortUrlEntitiesCrossPartitionAsync(shortUrls).ConfigureAwait(false);
+                await _storageTableHelper.SaveShortUrlEntitiesCrossPartitionAsync(shortUrls, false).ConfigureAwait(false);
 
                 sw.Stop();
                 log.LogInformation($"Saved {shortUrls.Count} short urls in {sw.ElapsedMilliseconds} ms.");
