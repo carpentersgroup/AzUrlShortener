@@ -176,7 +176,7 @@ namespace Shortener.AzureServices
             {
                 var tblUrls = GetUrlsTable();
 
-                var results = tblUrls.QueryAsync<ShortUrlEntity>($"not (Version ne '') or Version eq {versionNumber}");
+                var results = tblUrls.QueryAsync<ShortUrlEntity>($"not (Version ne '') or Version eq {versionNumber} and PartitionKey ne 'KEY'");
 
                 List<ShortUrlEntity> entities = new List<ShortUrlEntity>();
                 await foreach (var result in results.ConfigureAwait(false))
