@@ -181,6 +181,7 @@ namespace Shortener.AzureServices
                 }
                 else
                 {
+                    this._logger.LogWarning("GetShortUrlEntityByVanityAsync partition key is null");
                     string filter = TableClient.CreateQueryFilter<ShortUrlEntity>(s => s.RowKey == vanity);
                     var results = tblUrls.QueryAsync<ShortUrlEntity>(filter, 1);
 
